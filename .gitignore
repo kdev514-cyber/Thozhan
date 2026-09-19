@@ -1,41 +1,83 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ============================================
+# THOZHAN - Git Ignore
+# ============================================
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# --------------------
+# Secrets / environment
+# --------------------
+.env
+.env.*
+!.env.example
 
-# testing
-/coverage
+backend/.env
+backend/.env.*
+!backend/.env.example
 
-# next.js
-/.next/
-/out/
+# --------------------
+# Python
+# --------------------
+venv/
+.venv/
+backend/venv/
+backend/.venv/
 
-# production
-/build
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
 
-# misc
-.DS_Store
-*.pem
+# --------------------
+# Node / Next.js
+# --------------------
+node_modules/
+.next/
+out/
 
-# debug
+# --------------------
+# Vercel
+# --------------------
+.vercel/
+
+# --------------------
+# Logs
+# --------------------
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# --------------------
+# macOS
+# --------------------
+.DS_Store
+.AppleDouble
+.LSOverride
 
-# vercel
-.vercel
+# --------------------
+# Editors
+# --------------------
+.vscode/
+.idea/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# --------------------
+# Temporary files
+# --------------------
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# --------------------
+# Private keys / certificates
+# --------------------
+*.pem
+*.key
+*.p12
+*.pfx
+
+# --------------------
+# Coverage
+# --------------------
+coverage/
+htmlcov/

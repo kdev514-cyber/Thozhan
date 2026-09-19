@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+groq
+cryptography
+supabase
+mcp[cli]
