@@ -1,0 +1,71 @@
+
+> thozhan@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local
+⚠ Warning: Next.js ignored package-lock.json in /Users/drk because it is outside the current Git repository (/Users/drk/Desktop/thozhan).
+ To use this directory, set `turbopack.root` in your Next.js config.
+
+✓ Running next.config.ts took 10ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 130ms
+  Running TypeScript ...
+  Finished TypeScript in 755ms ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/14) ...
+⨯ useSearchParams() should be wrapped in a suspense boundary at page "/meetings". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at Object.X (/Users/drk/Desktop/thozhan/.next/server/chunks/ssr/_1zd55z5._.js:194:3038)
+    at q (/Users/drk/Desktop/thozhan/.next/server/chunks/ssr/_1zd55z5._.js:46:13528)
+    at /Users/drk/Desktop/thozhan/.next/server/chunks/ssr/app_meetings_page_tsx_1ol71hf._.js:1:2402
+    at al (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:85944)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:87760)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at au (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:86296)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:87805)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106280)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at aS (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:114685)
+    at ap (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:111684)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109897)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:100962)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:105898)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at au (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:86296)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:87805)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at aS (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:114685)
+    at ap (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:111684)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109897)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:87724)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at au (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:86296)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:87805)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:100962)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at au (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:86296)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:87805)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:100962)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+    at af (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:106940)
+    at au (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:86296)
+    at ac (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:87805)
+    at ah (/Users/drk/Desktop/thozhan/node_modules/next/dist/compiled/next-server/app-page-turbo.runtime.prod.js:2:109623)
+Error occurred prerendering page "/meetings". Read more: https://nextjs.org/docs/messages/prerender-error
+Export encountered an error on /meetings/page: /meetings, exiting the build.
+⨯ Next.js build worker exited with code: 1 and signal: null

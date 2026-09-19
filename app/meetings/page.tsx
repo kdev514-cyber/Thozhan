@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useCallback,
   useEffect,
   useState,
@@ -68,6 +69,30 @@ type CalendarEvent = {
 };
 
 export default function MeetingsPage() {
+  return (
+    <Suspense fallback={<MeetingsLoading />}>
+      <MeetingsContent />
+    </Suspense>
+  );
+}
+
+function MeetingsLoading() {
+  return (
+    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <div className="text-center">
+        <Loader2
+          size={26}
+          className="animate-spin text-blue-400 mx-auto"
+        />
+        <p className="text-slate-400 mt-4">
+          Loading Thozhan...
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function MeetingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -245,7 +270,7 @@ export default function MeetingsPage() {
   const [meetingActionMessage, setMeetingActionMessage] =
     useState<Record<string, string>>({});
 
-  function meetingKey(meeting: MeetingRequest) {
+  function meetingKey(meeting: MeetingSuggestion) {
     return `${meeting.email_id}-${meeting.purpose}`;
   }
 
@@ -263,7 +288,7 @@ export default function MeetingsPage() {
     return session.access_token;
   }
 
-  async function checkMeetingAvailability(meeting: MeetingRequest) {
+  async function checkMeetingAvailability(meeting: MeetingSuggestion) {
     const key = meetingKey(meeting);
 
     if (!meeting.proposed_start || !meeting.proposed_end) {
@@ -329,7 +354,7 @@ export default function MeetingsPage() {
     }
   }
 
-  async function scheduleMeeting(meeting: MeetingRequest) {
+  async function scheduleMeeting(meeting: MeetingSuggestion) {
     const key = meetingKey(meeting);
 
     if (!meeting.proposed_start || !meeting.proposed_end) {
