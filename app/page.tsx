@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import ThozhanLogo from "@/components/thozhan/ThozhanLogo";
 import {
   Mail,
   Lock,
   ArrowRight,
-  Sparkles,
   Eye,
   EyeOff,
   Loader2,
+  Sparkles,
+  Check,
 } from "lucide-react";
 
 export default function Home() {
@@ -19,7 +21,6 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -40,10 +41,8 @@ export default function Home() {
 
       if (error) {
         console.error("Supabase login error:", error);
-
         setErrorMessage(error.message);
         setLoading(false);
-
         return;
       }
 
@@ -51,9 +50,7 @@ export default function Home() {
         setErrorMessage(
           "Login succeeded but Supabase did not create a session."
         );
-
         setLoading(false);
-
         return;
       }
 
@@ -75,358 +72,245 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex">
+    <main className="min-h-screen bg-[#F7F7F5] text-[#18181B]">
+      <div className="min-h-screen lg:grid lg:grid-cols-[1.08fr_0.92fr]">
+        {/* LEFT / BRAND */}
+        <section className="relative hidden lg:flex overflow-hidden border-r border-[#E8E8E4] px-14 xl:px-20 py-12 flex-col justify-between">
+          {/* Decorative orbit */}
+          <div className="pointer-events-none absolute -left-28 top-[18%] h-[560px] w-[560px] rounded-full border border-[#625ED1]/10" />
+          <div className="pointer-events-none absolute -left-8 top-[27%] h-[390px] w-[390px] rounded-full border border-[#625ED1]/10" />
 
-      {/* LEFT SIDE */}
+          <div className="pointer-events-none absolute left-[38%] top-[29%] h-2.5 w-2.5 rounded-full bg-[#625ED1] shadow-[0_0_0_7px_rgba(98,94,209,0.08)]" />
 
-      <section className="hidden lg:flex lg:w-1/2 relative overflow-hidden p-16 flex-col justify-between border-r border-slate-200">
+          {/* Brand */}
+          <div className="relative z-10 flex items-center gap-3">
+            <ThozhanLogo />
 
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-[#F5F5F7] to-cyan-50" />
+            <div>
+              <p className="text-[17px] font-semibold tracking-[-0.02em]">
+                Thozhan
+              </p>
 
-        {/* Logo */}
-
-        <div className="relative z-10 flex items-center gap-3">
-
-          <div className="w-11 h-11 rounded-xl bg-blue-600 flex items-center justify-center">
-            <Mail size={22} />
+              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-400">
+                Always with you
+              </p>
+            </div>
           </div>
 
-          <div>
-            <h1 className="font-semibold text-xl">
-              Thozhan
+          {/* Main message */}
+          <div className="relative z-10 max-w-[650px] pb-8">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#625ED1]/15 bg-[#625ED1]/[0.06] px-3.5 py-2 text-xs font-medium text-[#5753C9]">
+              <Sparkles size={14} />
+              Your personal AI companion
+            </div>
+
+            <h1 className="max-w-[620px] text-[52px] xl:text-[64px] font-semibold leading-[1.02] tracking-[-0.055em]">
+              Less inbox.
+              <span className="block text-[#625ED1]">
+                More clarity.
+              </span>
             </h1>
 
-            <p className="text-xs text-slate-500">
-              AI Companion
+            <p className="mt-7 max-w-[560px] text-[17px] leading-8 text-zinc-500">
+              Thozhan reads through the noise, finds what matters,
+              keeps track of your tasks and helps organise your day.
             </p>
-          </div>
 
-        </div>
-
-
-        {/* Hero */}
-
-        <div className="relative z-10 max-w-xl">
-
-          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-400/20 px-4 py-2 rounded-full text-blue-300 text-sm mb-8">
-
-            <Sparkles size={15} />
-
-            Your intelligent personal companion
-
-          </div>
-
-
-          <h2 className="text-5xl xl:text-6xl font-semibold leading-tight tracking-tight">
-
-            Your inbox,
-
-            <span className="block text-blue-600">
-              intelligently managed.
-            </span>
-
-          </h2>
-
-
-          <p className="text-slate-500 text-lg mt-7 leading-relaxed max-w-lg">
-
-            Read less. Know more. Thozhan summarises your emails,
-            identifies what needs your attention and helps organise
-            your meetings.
-
-          </p>
-
-
-          <div className="flex gap-8 mt-10 text-sm">
-
-            <div>
-
-              <p className="text-[#1D1D1F] font-medium">
-                Smart summaries
-              </p>
-
-              <p className="text-slate-500 mt-1">
-                Understand emails faster
-              </p>
-
+            <div className="mt-10 grid max-w-[560px] grid-cols-3 gap-3">
+              <Feature label="Priority emails" />
+              <Feature label="Smart tasks" />
+              <Feature label="Meetings" />
             </div>
-
-
-            <div>
-
-              <p className="text-[#1D1D1F] font-medium">
-                Smart scheduling
-              </p>
-
-              <p className="text-slate-500 mt-1">
-                Organise meetings effortlessly
-              </p>
-
-            </div>
-
           </div>
 
-        </div>
-
-
-        <p className="relative z-10 text-slate-500 text-sm">
-          தோழன் · Your AI companion
-        </p>
-
-      </section>
-
-
-      {/* RIGHT SIDE */}
-
-      <section className="w-full lg:w-1/2 flex items-center justify-center p-6">
-
-        <div className="w-full max-w-md">
-
-          {/* Mobile Logo */}
-
-          <div className="lg:hidden flex items-center gap-3 mb-12">
-
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-              <Mail size={20} />
-            </div>
-
-            <span className="font-semibold text-xl">
-              Thozhan
-            </span>
-
+          <div className="relative z-10 flex items-center justify-between text-xs text-zinc-400">
+            <span>தோழன் · Your AI companion</span>
+            <span>Built for your everyday</span>
           </div>
+        </section>
 
+        {/* RIGHT / LOGIN */}
+        <section className="relative flex min-h-screen items-center justify-center px-5 py-10 sm:px-8 lg:px-12">
+          {/* Mobile header */}
+          <div className="absolute left-5 right-5 top-6 flex items-center justify-between lg:hidden">
+            <div className="flex items-center gap-2.5">
+              <ThozhanLogo compact />
 
-          <p className="text-blue-600 text-sm font-medium mb-3">
-            WELCOME BACK
-          </p>
-
-
-          <h2 className="text-3xl font-semibold tracking-tight">
-            Sign in to Thozhan
-          </h2>
-
-
-          <p className="text-slate-500 mt-2 mb-9">
-            Your inbox and AI assistant are waiting.
-          </p>
-
-
-          {/* LOGIN FORM */}
-
-          <form
-            onSubmit={handleLogin}
-            className="space-y-5"
-          >
-
-            {/* EMAIL */}
-
-            <div>
-
-              <label
-                htmlFor="email"
-                className="text-sm text-slate-700"
-              >
-                Email address
-              </label>
-
-
-              <div className="relative mt-2">
-
-                <Mail
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                />
-
-
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) =>
-                    setEmail(e.target.value)
-                  }
-                  placeholder="you@example.com"
-                  className="w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-                />
-
+              <div>
+                <p className="text-sm font-semibold">Thozhan</p>
+                <p className="text-[9px] uppercase tracking-[0.16em] text-zinc-400">
+                  Always with you
+                </p>
               </div>
-
             </div>
 
+            <span className="text-xs text-zinc-400">
+              தோழன்
+            </span>
+          </div>
 
-            {/* PASSWORD */}
+          <div className="w-full max-w-[430px]">
+            <div className="mb-9">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#625ED1]">
+                Welcome back
+              </p>
 
-            <div>
+              <h2 className="text-[34px] sm:text-[38px] font-semibold tracking-[-0.04em]">
+                Sign in to Thozhan
+              </h2>
 
-              <div className="flex justify-between">
+              <p className="mt-3 text-[15px] leading-6 text-zinc-500">
+                Your inbox, tasks and meetings are waiting.
+              </p>
+            </div>
 
+            <form onSubmit={handleLogin} className="space-y-5">
+              {/* EMAIL */}
+              <div>
                 <label
-                  htmlFor="password"
-                  className="text-sm text-slate-700"
+                  htmlFor="email"
+                  className="text-[13px] font-medium text-zinc-700"
                 >
-                  Password
+                  Email address
                 </label>
 
-
-                <button
-                  type="button"
-                  className="text-sm text-blue-600 hover:text-blue-700"
-                >
-                  Forgot password?
-                </button>
-
-              </div>
-
-
-              <div className="relative mt-2">
-
-                <Lock
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                />
-
-
-                <input
-                  id="password"
-                  name="password"
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
-                  placeholder="Enter your password"
-                  className="w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-12 pr-12 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-                />
-
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword(
-                      (current) => !current
-                    )
-                  }
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#1D1D1F]"
-                  aria-label={
-                    showPassword
-                      ? "Hide password"
-                      : "Show password"
-                  }
-                >
-
-                  {showPassword ? (
-                    <EyeOff size={18} />
-                  ) : (
-                    <Eye size={18} />
-                  )}
-
-                </button>
-
-              </div>
-
-            </div>
-
-
-            {/* ERROR MESSAGE */}
-
-            {errorMessage && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3">
-
-                <p className="text-sm text-red-400">
-                  {errorMessage}
-                </p>
-
-              </div>
-            )}
-
-
-            {/* SIGN IN */}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white hover:bg-blue-500 disabled:bg-blue-600/50 disabled:cursor-not-allowed rounded-xl py-3.5 font-medium flex items-center justify-center gap-2 transition"
-            >
-
-              {loading ? (
-                <>
-                  <Loader2
-                    size={18}
-                    className="animate-spin"
+                <div className="relative mt-2">
+                  <Mail
+                    size={17}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"
                   />
 
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  Sign in
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full rounded-xl border border-[#DEDEDA] bg-white py-3.5 pl-11 pr-4 text-[14px] outline-none transition placeholder:text-zinc-400 focus:border-[#625ED1] focus:ring-4 focus:ring-[#625ED1]/[0.08]"
+                  />
+                </div>
+              </div>
 
-                  <ArrowRight size={18} />
-                </>
+              {/* PASSWORD */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="text-[13px] font-medium text-zinc-700"
+                  >
+                    Password
+                  </label>
+
+                  <span className="text-xs text-zinc-400">
+                    Keep it private
+                  </span>
+                </div>
+
+                <div className="relative mt-2">
+                  <Lock
+                    size={17}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"
+                  />
+
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full rounded-xl border border-[#DEDEDA] bg-white py-3.5 pl-11 pr-12 text-[14px] outline-none transition placeholder:text-zinc-400 focus:border-[#625ED1] focus:ring-4 focus:ring-[#625ED1]/[0.08]"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPassword((current) => !current)
+                    }
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-zinc-700"
+                    aria-label={
+                      showPassword
+                        ? "Hide password"
+                        : "Show password"
+                    }
+                  >
+                    {showPassword ? (
+                      <EyeOff size={17} />
+                    ) : (
+                      <Eye size={17} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* ERROR */}
+              {errorMessage && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                  <p className="text-sm leading-5 text-red-600">
+                    {errorMessage}
+                  </p>
+                </div>
               )}
 
-            </button>
+              {/* LOGIN */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#5753C9] py-3.5 text-sm font-medium text-white shadow-[0_8px_24px_rgba(87,83,201,0.18)] transition hover:bg-[#4D49BA] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <Loader2
+                      size={17}
+                      className="animate-spin"
+                    />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    Sign in
+                    <ArrowRight size={17} />
+                  </>
+                )}
+              </button>
+            </form>
 
-          </form>
+            {/* SIGN UP */}
+            <div className="mt-8 border-t border-[#E7E7E3] pt-7">
+              <p className="text-center text-sm text-zinc-500">
+                New to Thozhan?{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push("/signup")}
+                  className="font-medium text-[#5753C9] transition hover:text-[#4541A9]"
+                >
+                  Create an account
+                </button>
+              </p>
+            </div>
 
-
-          {/* DIVIDER */}
-
-          <div className="flex items-center gap-4 my-8">
-
-            <div className="h-px bg-slate-800 flex-1" />
-
-            <span className="text-xs text-slate-500">
-              OR
-            </span>
-
-            <div className="h-px bg-slate-800 flex-1" />
-
+            <p className="mt-8 text-center text-[11px] leading-5 text-zinc-400 lg:hidden">
+              தோழன் · Your personal AI companion
+            </p>
           </div>
-
-
-          {/* GOOGLE */}
-
-          <button
-            type="button"
-            className="w-full border border-slate-200 bg-white/80 hover:bg-white rounded-xl py-3.5 font-medium transition"
-          >
-            Continue with Google
-          </button>
-
-
-          {/* SIGN UP */}
-
-          <p className="text-center text-slate-500 text-sm mt-8">
-
-            New to Thozhan?{" "}
-
-            <button
-              type="button"
-              onClick={() =>
-                router.push("/signup")
-              }
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Create an account
-            </button>
-
-          </p>
-
-        </div>
-
-      </section>
-
+        </section>
+      </div>
     </main>
+  );
+}
+
+function Feature({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-[#E4E4E0] bg-white/70 px-3.5 py-3 text-xs font-medium text-zinc-600 backdrop-blur-sm">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#625ED1]/10 text-[#5753C9]">
+        <Check size={12} strokeWidth={2.5} />
+      </span>
+      {label}
+    </div>
   );
 }
