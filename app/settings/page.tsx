@@ -68,7 +68,7 @@ export default function SettingsPage() {
       const session = await getSession();
       if (!session) return;
 
-      const response = await fetch("http://localhost:8000/api/settings", {
+      const response = await fetch("/api/settings", {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -99,7 +99,7 @@ export default function SettingsPage() {
       const session = await getSession();
       if (!session) return;
 
-      const response = await fetch("http://localhost:8000/api/settings", {
+      const response = await fetch("/api/settings", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${session.access_token}`,

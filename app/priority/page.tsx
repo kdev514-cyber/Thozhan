@@ -167,7 +167,7 @@ export default function PriorityPage() {
 
         const response =
           await fetch(
-            "http://localhost:8000/api/priority",
+            "/api/priority",
             {
               method: "GET",
 
@@ -257,7 +257,7 @@ export default function PriorityPage() {
       }
 
       const response = await fetch(
-        "http://localhost:8000/api/sync",
+        "/api/sync",
         {
           method: "POST",
           headers: {

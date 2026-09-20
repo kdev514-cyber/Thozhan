@@ -222,7 +222,7 @@ export default function DashboardPage() {
         try {
           const response =
             await fetch(
-              "http://localhost:8000/api/groq/status",
+              "/api/groq/status",
               {
                 method: "GET",
 
@@ -280,7 +280,7 @@ export default function DashboardPage() {
         try {
           const response =
             await fetch(
-              "http://localhost:8000/api/gmail/status",
+              "/api/gmail/status",
               {
                 method: "GET",
 
@@ -410,7 +410,7 @@ export default function DashboardPage() {
 
       const response =
         await fetch(
-          "http://localhost:8000/api/gmail/emails",
+          "/api/gmail/emails",
           {
             method: "GET",
 
@@ -534,7 +534,7 @@ export default function DashboardPage() {
 
       const response =
         await fetch(
-          "http://localhost:8000/api/assistant/chat",
+          "/api/assistant/chat",
           {
             method: "POST",
 

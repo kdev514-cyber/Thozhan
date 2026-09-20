@@ -49,7 +49,7 @@ export default function GmailSetupPage() {
         }
 
         const response = await fetch(
-          "http://localhost:8000/api/gmail/status",
+          "/api/gmail/status",
           {
             method: "GET",
 
@@ -143,7 +143,7 @@ export default function GmailSetupPage() {
       }
 
       const response = await fetch(
-        "http://localhost:8000/api/gmail/connect",
+        "/api/gmail/connect",
         {
           method: "POST",
 

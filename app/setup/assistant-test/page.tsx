@@ -73,7 +73,7 @@ export default function AssistantTestPage() {
       }
 
       const result = await fetch(
-        "http://localhost:8000/api/assistant/chat",
+        "/api/assistant/chat",
         {
           method: "POST",
 

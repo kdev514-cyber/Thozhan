@@ -141,7 +141,7 @@ export default function AISetupPage() {
 
       const response =
         await fetch(
-          "http://localhost:8000/api/groq/connect",
+          "/api/groq/connect",
           {
             method: "POST",
 

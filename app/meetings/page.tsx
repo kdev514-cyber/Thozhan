@@ -166,7 +166,7 @@ function MeetingsContent() {
 
         const statusResponse =
           await fetch(
-            "http://localhost:8000/api/calendar/status",
+            "/api/calendar/status",
             {
               headers,
               cache: "no-store",
@@ -195,7 +195,7 @@ function MeetingsContent() {
 
         const meetingsResponse =
           await fetch(
-            "http://localhost:8000/api/meetings",
+            "/api/meetings",
             {
               headers,
               cache: "no-store",
@@ -223,7 +223,7 @@ function MeetingsContent() {
         if (connected) {
           const eventsResponse =
             await fetch(
-              "http://localhost:8000/api/calendar/events",
+              "/api/calendar/events",
               {
                 headers,
                 cache: "no-store",
@@ -305,7 +305,7 @@ function MeetingsContent() {
       if (!accessToken) return;
 
       const response = await fetch(
-        "http://localhost:8000/api/calendar/availability",
+        "/api/calendar/availability",
         {
           method: "POST",
           headers: {
@@ -379,7 +379,7 @@ function MeetingsContent() {
           : [];
 
       const response = await fetch(
-        "http://localhost:8000/api/calendar/events",
+        "/api/calendar/events",
         {
           method: "POST",
           headers: {
@@ -462,7 +462,7 @@ function MeetingsContent() {
 
       const response =
         await fetch(
-          "http://localhost:8000/api/calendar/oauth/start",
+          "/api/calendar/oauth/start",
           {
             headers: {
               Authorization:

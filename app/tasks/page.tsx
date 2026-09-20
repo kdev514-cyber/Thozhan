@@ -152,7 +152,7 @@ export default function TasksPage() {
 
         const response =
           await fetch(
-            "http://localhost:8000/api/tasks",
+            "/api/tasks",
             {
               method: "GET",
 
@@ -252,7 +252,7 @@ export default function TasksPage() {
 
       const response =
         await fetch(
-          `http://localhost:8000/api/tasks/${task.task_id}/status`,
+          `/api/tasks/${task.task_id}/status`,
           {
             method: "PATCH",
 
@@ -325,7 +325,7 @@ export default function TasksPage() {
       }
 
       const response = await fetch(
-        "http://localhost:8000/api/sync",
+        "/api/sync",
         {
           method: "POST",
           headers: {

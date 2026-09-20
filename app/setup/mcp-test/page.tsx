@@ -52,7 +52,7 @@ export default function MCPTestPage() {
 
       // Call the FastAPI MCP test endpoint
       const response = await fetch(
-        "http://localhost:8000/api/mcp/gmail/test",
+        "/api/mcp/gmail/test",
         {
           method: "GET",
 
