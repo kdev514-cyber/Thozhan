@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -99,6 +100,21 @@ export default function DashboardPage() {
 
   const [gmailAddress, setGmailAddress] =
     useState("");
+
+  const [calendarStatus, setCalendarStatus] =
+    useState<ConnectionStatus>("loading");
+
+  const [calendarAddress, setCalendarAddress] =
+    useState("");
+
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [showNotifications, setShowNotifications] =
+    useState(false);
+
+  const [showProfileMenu, setShowProfileMenu] =
+    useState(false);
 
   const [inboxStatus, setInboxStatus] =
     useState<InboxStatus>(
@@ -336,7 +352,52 @@ export default function DashboardPage() {
 
 
         // -----------------------------------------
-        // 5. Load inbox if Gmail connected
+        // 5. Check Google Calendar status
+        // -----------------------------------------
+
+        try {
+          const response =
+            await fetch(
+              "/api/calendar/status",
+              {
+                method: "GET",
+                headers: {
+                  Authorization:
+                    `Bearer ${accessToken}`,
+                },
+                cache: "no-store",
+              }
+            );
+
+          if (!response.ok) {
+            throw new Error(
+              `Backend returned HTTP ${response.status}`
+            );
+          }
+
+          const data =
+            await response.json();
+
+          if (data.connected === true) {
+            setCalendarStatus("connected");
+            setCalendarAddress(
+              data.email ??
+              data.google_email ??
+              ""
+            );
+          } else {
+            setCalendarStatus("not_connected");
+          }
+        } catch (error) {
+          console.error(
+            "Calendar status check failed:",
+            error
+          );
+          setCalendarStatus("error");
+        }
+
+        // -----------------------------------------
+        // 6. Load inbox if Gmail connected
         // -----------------------------------------
 
         if (
@@ -726,6 +787,31 @@ export default function DashboardPage() {
   }
 
 
+  const normalizedSearch =
+    searchQuery.trim().toLowerCase();
+
+  const filteredEmails =
+    normalizedSearch
+      ? emails.filter((message) => {
+          const searchable = [
+            message.subject,
+            message.sender_name,
+            message.sender_email,
+            message.body,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return searchable.includes(
+            normalizedSearch
+          );
+        })
+      : emails;
+
+  const notificationItems =
+    emails.slice(0, 5);
+
   // =====================================================
   // LOADING SCREEN
   // =====================================================
@@ -846,14 +932,21 @@ export default function DashboardPage() {
               <Sparkles />
             }
             label="AI Assistant"
+            onClick={() => {
+              document
+                .getElementById("ai-assistant")
+                ?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+            }}
           />
 
           <SidebarItem
             icon={
               <Settings />
             }
-            label="Settings"
-          />
+            label="Settings" onClick={() => router.push("/settings")} />
 
         </nav>
 
@@ -944,35 +1037,124 @@ export default function DashboardPage() {
             />
 
             <input
-              disabled
+              value={searchQuery}
+              onChange={(event) =>
+                setSearchQuery(event.target.value)
+              }
               placeholder="Search your inbox..."
-              className="w-full bg-slate-900/60 border border-slate-800 rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none placeholder:text-slate-600"
+              className="w-full bg-slate-900/60 border border-slate-800 rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none placeholder:text-slate-600 focus:border-blue-500/60 transition"
             />
 
           </div>
 
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
 
             <button
               type="button"
-              className="w-10 h-10 border border-slate-800 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition"
+              onClick={() => {
+                setShowNotifications(
+                  (current) => !current
+                );
+                setShowProfileMenu(false);
+              }}
+              className="relative w-10 h-10 border border-slate-800 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-700 transition"
+              aria-label="Notifications"
             >
-
-              <Bell
-                size={18}
-              />
-
+              <Bell size={18} />
+              {notificationItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-blue-600 text-[10px] text-white flex items-center justify-center">
+                  {notificationItems.length}
+                </span>
+              )}
             </button>
 
+            <button
+              type="button"
+              onClick={() => {
+                setShowProfileMenu(
+                  (current) => !current
+                );
+                setShowNotifications(false);
+              }}
+              className="w-9 h-9 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center hover:bg-blue-600/30 transition"
+              aria-label="Profile"
+            >
+              <User size={17} />
+            </button>
 
-            <div className="w-9 h-9 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center">
+            {showNotifications && (
+              <div className="absolute right-12 top-12 z-50 w-80 max-h-96 overflow-y-auto border border-slate-800 bg-slate-950 shadow-2xl rounded-2xl p-3">
+                <div className="flex items-center justify-between px-2 py-2">
+                  <p className="font-medium">Notifications</p>
+                  <span className="text-xs text-slate-500">
+                    {notificationItems.length} recent
+                  </span>
+                </div>
 
-              <User
-                size={17}
-              />
+                {notificationItems.length === 0 ? (
+                  <p className="text-sm text-slate-500 px-2 py-5">
+                    No recent inbox notifications.
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {notificationItems.map((message) => (
+                      <button
+                        type="button"
+                        key={message.id}
+                        onClick={() => {
+                          setSearchQuery(
+                            message.subject || message.sender_email
+                          );
+                          setShowNotifications(false);
+                        }}
+                        className="w-full text-left rounded-xl p-3 hover:bg-slate-900 transition"
+                      >
+                        <p className="text-sm font-medium truncate">
+                          {message.subject || "Email"}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1 truncate">
+                          {message.sender_name ||
+                            message.sender_email ||
+                            "Unknown sender"}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-            </div>
+            {showProfileMenu && (
+              <div className="absolute right-0 top-12 z-50 w-64 border border-slate-800 bg-slate-950 shadow-2xl rounded-2xl p-3">
+                <div className="px-3 py-3 border-b border-slate-800">
+                  <p className="text-sm font-medium truncate">
+                    {name}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 truncate">
+                    {email}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => router.push("/settings")}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 mt-2 rounded-xl text-sm text-slate-300 hover:bg-slate-900 hover:text-white transition"
+                >
+                  <Settings size={16} />
+                  Settings
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:bg-slate-900 hover:text-white transition"
+                >
+                  <LogOut size={16} />
+                  Sign out
+                </button>
+              </div>
+            )}
 
           </div>
 
@@ -1091,10 +1273,25 @@ export default function DashboardPage() {
                 <CalendarCheck />
               }
               title="Calendar"
-              description="Connect Google Calendar to manage appointments and meetings."
-              buttonText="Connect Calendar"
+              description={
+                calendarStatus === "connected"
+                  ? calendarAddress
+                    ? `Connected as ${calendarAddress}`
+                    : "Google Calendar is connected and ready."
+                  : calendarStatus === "error"
+                  ? "Thozhan could not check your Calendar connection."
+                  : "Connect Google Calendar to manage appointments and meetings."
+              }
+              buttonText={
+                calendarStatus === "connected"
+                  ? "Manage Calendar"
+                  : "Connect Calendar"
+              }
               number="03"
-              status="not_connected"
+              status={calendarStatus}
+              onClick={() =>
+                router.push("/meetings")
+              }
             />
 
           </div>
@@ -1383,7 +1580,9 @@ export default function DashboardPage() {
 
 
                   <span className="text-xs text-slate-500">
-                    {emails.length} messages
+                    {searchQuery.trim()
+                      ? `${filteredEmails.length} of ${emails.length} messages`
+                      : `${emails.length} messages`}
                   </span>
 
                 </div>
@@ -1391,7 +1590,19 @@ export default function DashboardPage() {
 
                 <div className="divide-y divide-slate-800/80">
 
-                  {emails.map(
+                  {filteredEmails.length === 0 && searchQuery.trim() && (
+                    <div className="p-8 text-center">
+                      <Search
+                        size={24}
+                        className="text-slate-600 mx-auto"
+                      />
+                      <p className="text-sm text-slate-400 mt-3">
+                        No emails match “{searchQuery}”.
+                      </p>
+                    </div>
+                  )}
+
+                  {filteredEmails.map(
                     (message) => (
 
                     <div
@@ -1478,7 +1689,7 @@ export default function DashboardPage() {
               AI ASSISTANT
           ===================================== */}
 
-          <div className="mt-6">
+          <div id="ai-assistant" className="mt-6 scroll-mt-24">
 
 
             {assistantStatus ===
