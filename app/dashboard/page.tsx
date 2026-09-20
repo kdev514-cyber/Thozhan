@@ -1,56 +1,33 @@
-
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import {
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  useRouter,
-} from "next/navigation";
-
-import {
-  createClient,
-} from "@/lib/supabase/client";
-
-import {
-  Mail,
-  Inbox,
-  Star,
-  CheckSquare,
+  AlertCircle,
+  ArrowRight,
+  Bell,
   CalendarDays,
+  CheckCircle2,
+  CheckSquare,
+  ChevronRight,
+  Inbox,
+  Loader2,
+  LogOut,
+  Mail,
+  RefreshCw,
+  Search,
+  Send,
   Settings,
   Sparkles,
-  LogOut,
-  BrainCircuit,
-  MailCheck,
-  CalendarCheck,
-  ArrowRight,
-  Loader2,
+  Star,
   User,
-  Search,
-  Bell,
-  CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  Send,
 } from "lucide-react";
 
-
-type ConnectionStatus =
-  | "loading"
-  | "connected"
-  | "not_connected"
-  | "error";
-
-
-type InboxStatus =
-  | "idle"
-  | "loading"
-  | "loaded"
-  | "error";
-
+type ConnectionStatus = "loading" | "connected" | "not_connected" | "error";
+type InboxStatus = "idle" | "loading" | "loaded" | "error";
+type AssistantStatus = "idle" | "loading" | "success" | "error";
+type PriorityLevel = "high" | "normal" | "low";
 
 type GmailEmail = {
   id: string;
@@ -61,2040 +38,818 @@ type GmailEmail = {
   body: string;
 };
 
-
-type AssistantStatus =
-  | "idle"
-  | "loading"
-  | "success"
-  | "error";
-
-
 type AssistantResponse = {
   success: boolean;
   answer: string;
   tools_used: string[];
 };
 
+type PriorityEmail = {
+  id: string;
+  subject: string;
+  sender: string;
+  sender_email: string;
+  date: string;
+  priority: PriorityLevel;
+  summary: string;
+  action: string;
+  deadline: string | null;
+  reply_needed: boolean;
+  reply_status: "yes" | "no" | "unclear";
+  meeting: unknown | null;
+  reason: string;
+};
+
+type EmailTask = {
+  task_id: string;
+  source_email_id: string;
+  title: string;
+  description: string;
+  priority: PriorityLevel;
+  deadline: string | null;
+  requires_reply: boolean;
+  status: "pending" | "completed";
+};
+
+type MeetingSuggestion = {
+  email_id: string;
+  subject: string;
+  sender: string;
+  sender_email: string;
+  purpose: string;
+  requested: boolean;
+  proposed_start: string | null;
+  proposed_end: string | null;
+  duration_minutes: number | null;
+  location: string | null;
+  meeting_link: string | null;
+  needs_response: boolean;
+  confidence: "high" | "medium" | "low";
+  reason: string;
+};
+
+type SyncResult = {
+  success?: boolean;
+  checked?: number;
+  new_emails?: number;
+  processed?: number;
+  tasks_added?: number;
+  remaining_new?: number;
+  message?: string;
+};
 
 export default function DashboardPage() {
   const router = useRouter();
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
-  const [name, setName] =
-    useState("");
+  const [groqStatus, setGroqStatus] = useState<ConnectionStatus>("loading");
+  const [gmailStatus, setGmailStatus] = useState<ConnectionStatus>("loading");
+  const [calendarStatus, setCalendarStatus] = useState<ConnectionStatus>("loading");
+  const [gmailAddress, setGmailAddress] = useState("");
 
-  const [email, setEmail] =
-    useState("");
+  const [inboxStatus, setInboxStatus] = useState<InboxStatus>("idle");
+  const [emails, setEmails] = useState<GmailEmail[]>([]);
+  const [inboxError, setInboxError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const [groqStatus, setGroqStatus] =
-    useState<ConnectionStatus>(
-      "loading"
-    );
+  const [priorityEmails, setPriorityEmails] = useState<PriorityEmail[]>([]);
+  const [tasks, setTasks] = useState<EmailTask[]>([]);
+  const [meetings, setMeetings] = useState<MeetingSuggestion[]>([]);
 
-  const [gmailStatus, setGmailStatus] =
-    useState<ConnectionStatus>(
-      "loading"
-    );
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+  const [syncError, setSyncError] = useState("");
 
-  const [gmailAddress, setGmailAddress] =
-    useState("");
+  const [assistantMessage, setAssistantMessage] = useState("");
+  const [assistantStatus, setAssistantStatus] = useState<AssistantStatus>("idle");
+  const [assistantResponse, setAssistantResponse] = useState<AssistantResponse | null>(null);
+  const [assistantError, setAssistantError] = useState("");
 
-  const [calendarStatus, setCalendarStatus] =
-    useState<ConnectionStatus>("loading");
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  const [calendarAddress, setCalendarAddress] =
-    useState("");
+  const getAccessToken = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
 
-  const [searchQuery, setSearchQuery] =
-    useState("");
+    if (!session) {
+      router.replace("/");
+      return null;
+    }
 
-  const [showNotifications, setShowNotifications] =
-    useState(false);
+    return session.access_token;
+  }, [router]);
 
-  const [showProfileMenu, setShowProfileMenu] =
-    useState(false);
+  const loadInbox = useCallback(async (accessToken?: string) => {
+    try {
+      setInboxStatus("loading");
+      setInboxError("");
 
-  const [inboxStatus, setInboxStatus] =
-    useState<InboxStatus>(
-      "idle"
-    );
+      const token = accessToken ?? (await getAccessToken());
+      if (!token) return;
 
-  const [emails, setEmails] =
-    useState<GmailEmail[]>([]);
+      const response = await fetch("/api/gmail/emails", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
 
-  const [inboxError, setInboxError] =
-    useState("");
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Unable to load Gmail inbox.");
+      }
 
+      setEmails(Array.isArray(data.emails) ? data.emails : []);
+      setInboxStatus("loaded");
+    } catch (error) {
+      console.error("Inbox loading failed:", error);
+      setInboxStatus("error");
+      setInboxError(error instanceof Error ? error.message : "Unable to load Gmail inbox.");
+    }
+  }, [getAccessToken]);
 
-  const [assistantMessage, setAssistantMessage] =
-    useState("");
+  const loadIntelligence = useCallback(async (accessToken?: string) => {
+    const token = accessToken ?? (await getAccessToken());
+    if (!token) return;
 
+    const headers = { Authorization: `Bearer ${token}` };
 
-  const [assistantStatus, setAssistantStatus] =
-    useState<AssistantStatus>(
-      "idle"
-    );
+    const [priorityResponse, tasksResponse, meetingsResponse] = await Promise.all([
+      fetch("/api/priority", { headers, cache: "no-store" }),
+      fetch("/api/tasks", { headers, cache: "no-store" }),
+      fetch("/api/meetings", { headers, cache: "no-store" }),
+    ]);
 
+    const [priorityData, tasksData, meetingsData] = await Promise.all([
+      priorityResponse.json(),
+      tasksResponse.json(),
+      meetingsResponse.json(),
+    ]);
 
-  const [assistantResponse, setAssistantResponse] =
-    useState<AssistantResponse | null>(
-      null
-    );
-
-
-  const [assistantError, setAssistantError] =
-    useState("");
-
-
-  // =====================================================
-  // LOAD DASHBOARD
-  // =====================================================
+    if (priorityResponse.ok) {
+      setPriorityEmails(Array.isArray(priorityData.emails) ? priorityData.emails : []);
+    }
+    if (tasksResponse.ok) {
+      setTasks(Array.isArray(tasksData.tasks) ? tasksData.tasks : []);
+    }
+    if (meetingsResponse.ok) {
+      setMeetings(Array.isArray(meetingsData.meetings) ? meetingsData.meetings : []);
+    }
+  }, [getAccessToken]);
 
   useEffect(() => {
     async function loadDashboard() {
-      const supabase =
-        createClient();
+      const supabase = createClient();
 
       try {
-        // -----------------------------------------
-        // 1. Check logged-in user
-        // -----------------------------------------
-
-        const {
-          data: {
-            user,
-          },
-          error: userError,
-        } =
-          await supabase.auth.getUser();
-
-
-        if (
-          userError ||
-          !user
-        ) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
           router.replace("/");
           return;
         }
 
+        setEmail(user.email ?? "");
+        setName(user.user_metadata?.name || user.email?.split("@")[0] || "there");
 
-        setEmail(
-          user.email ?? ""
-        );
-
-
-        const userName =
-          user.user_metadata?.name ||
-          user.email?.split("@")[0] ||
-          "there";
-
-
-        setName(
-          userName
-        );
-
-
-        // -----------------------------------------
-        // 2. Get current Supabase session
-        // -----------------------------------------
-
-        const {
-          data: {
-            session,
-          },
-          error: sessionError,
-        } =
-          await supabase.auth.getSession();
-
-
-        if (
-          sessionError ||
-          !session
-        ) {
-          setGroqStatus(
-            "error"
-          );
-
-          setGmailStatus(
-            "error"
-          );
-
-          setLoading(false);
-
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          router.replace("/");
           return;
         }
 
+        const accessToken = session.access_token;
+        const headers = { Authorization: `Bearer ${accessToken}` };
 
-        const accessToken =
-          session.access_token;
+        const [groqResponse, gmailResponse, calendarResponse] = await Promise.allSettled([
+          fetch("/api/groq/status", { headers, cache: "no-store" }),
+          fetch("/api/gmail/status", { headers, cache: "no-store" }),
+          fetch("/api/calendar/status", { headers, cache: "no-store" }),
+        ]);
 
-
-        // -----------------------------------------
-        // 3. Check Groq status
-        // -----------------------------------------
-
-        try {
-          const response =
-            await fetch(
-              "/api/groq/status",
-              {
-                method: "GET",
-
-                headers: {
-                  Authorization:
-                    `Bearer ${accessToken}`,
-                },
-              }
-            );
-
-
-          if (!response.ok) {
-            throw new Error(
-              `Backend returned HTTP ${response.status}`
-            );
-          }
-
-
-          const data =
-            await response.json();
-
-
-          if (
-            data.connected === true
-          ) {
-            setGroqStatus(
-              "connected"
-            );
-          } else {
-            setGroqStatus(
-              "not_connected"
-            );
-          }
-
-        } catch (error) {
-          console.error(
-            "Groq status check failed:",
-            error
-          );
-
-          setGroqStatus(
-            "error"
-          );
+        if (groqResponse.status === "fulfilled" && groqResponse.value.ok) {
+          const data = await groqResponse.value.json();
+          setGroqStatus(data.connected === true ? "connected" : "not_connected");
+        } else {
+          setGroqStatus("error");
         }
 
-
-        // -----------------------------------------
-        // 4. Check Gmail status
-        // -----------------------------------------
-
-        let gmailIsConnected =
-          false;
-
-
-        try {
-          const response =
-            await fetch(
-              "/api/gmail/status",
-              {
-                method: "GET",
-
-                headers: {
-                  Authorization:
-                    `Bearer ${accessToken}`,
-                },
-              }
-            );
-
-
-          if (!response.ok) {
-            throw new Error(
-              `Backend returned HTTP ${response.status}`
-            );
-          }
-
-
-          const data =
-            await response.json();
-
-
-          if (
-            data.connected === true
-          ) {
-            gmailIsConnected =
-              true;
-
-            setGmailStatus(
-              "connected"
-            );
-
-            setGmailAddress(
-              data.email ?? ""
-            );
-
-          } else {
-            setGmailStatus(
-              "not_connected"
-            );
-          }
-
-        } catch (error) {
-          console.error(
-            "Gmail status check failed:",
-            error
-          );
-
-          setGmailStatus(
-            "error"
-          );
+        let gmailConnected = false;
+        if (gmailResponse.status === "fulfilled" && gmailResponse.value.ok) {
+          const data = await gmailResponse.value.json();
+          gmailConnected = data.connected === true;
+          setGmailStatus(gmailConnected ? "connected" : "not_connected");
+          setGmailAddress(data.email ?? data.gmail_address ?? "");
+        } else {
+          setGmailStatus("error");
         }
 
-
-        // -----------------------------------------
-        // 5. Check Google Calendar status
-        // -----------------------------------------
-
-        try {
-          const response =
-            await fetch(
-              "/api/calendar/status",
-              {
-                method: "GET",
-                headers: {
-                  Authorization:
-                    `Bearer ${accessToken}`,
-                },
-                cache: "no-store",
-              }
-            );
-
-          if (!response.ok) {
-            throw new Error(
-              `Backend returned HTTP ${response.status}`
-            );
-          }
-
-          const data =
-            await response.json();
-
-          if (data.connected === true) {
-            setCalendarStatus("connected");
-            setCalendarAddress(
-              data.email ??
-              data.google_email ??
-              ""
-            );
-          } else {
-            setCalendarStatus("not_connected");
-          }
-        } catch (error) {
-          console.error(
-            "Calendar status check failed:",
-            error
-          );
+        if (calendarResponse.status === "fulfilled" && calendarResponse.value.ok) {
+          const data = await calendarResponse.value.json();
+          setCalendarStatus(data.connected === true ? "connected" : "not_connected");
+        } else {
           setCalendarStatus("error");
         }
 
-        // -----------------------------------------
-        // 6. Load inbox if Gmail connected
-        // -----------------------------------------
-
-        if (
-          gmailIsConnected
-        ) {
-          await loadInbox(
-            accessToken
-          );
-        }
-
-
-        setLoading(false);
-
+        const work: Promise<unknown>[] = [loadIntelligence(accessToken)];
+        if (gmailConnected) work.push(loadInbox(accessToken));
+        await Promise.allSettled(work);
       } catch (error) {
-        console.error(
-          "Dashboard loading failed:",
-          error
-        );
-
-        router.replace("/");
+        console.error("Dashboard loading failed:", error);
+      } finally {
+        setLoading(false);
       }
     }
 
+    void loadDashboard();
+  }, [loadInbox, loadIntelligence, router]);
 
-    loadDashboard();
-
-  }, [router]);
-
-
-  // =====================================================
-  // LOAD INBOX
-  // =====================================================
-
-  async function loadInbox(
-    accessToken?: string
-  ) {
+  async function syncAndReload() {
     try {
-      setInboxStatus(
-        "loading"
-      );
+      setIsSyncing(true);
+      setSyncError("");
+      setSyncMessage("Checking your inbox for new mail…");
 
-      setInboxError("");
+      const token = await getAccessToken();
+      if (!token) return;
 
-
-      let token =
-        accessToken;
-
-
-      if (!token) {
-        const supabase =
-          createClient();
-
-        const {
-          data: {
-            session,
-          },
-        } =
-          await supabase.auth.getSession();
-
-
-        if (!session) {
-          router.replace("/");
-          return;
-        }
-
-
-        token =
-          session.access_token;
-      }
-
-
-      const response =
-        await fetch(
-          "/api/gmail/emails",
-          {
-            method: "GET",
-
-            headers: {
-              Authorization:
-                `Bearer ${token}`,
-            },
-
-            cache: "no-store",
-          }
-        );
-
-
-      const data =
-        await response.json();
-
-
-      if (!response.ok) {
-        throw new Error(
-          data.detail ??
-            "Unable to load Gmail inbox."
-        );
-      }
-
-
-      setEmails(
-        Array.isArray(
-          data.emails
-        )
-          ? data.emails
-          : []
-      );
-
-
-      setInboxStatus(
-        "loaded"
-      );
-
-    } catch (error) {
-      console.error(
-        "Inbox loading failed:",
-        error
-      );
-
-
-      setInboxStatus(
-        "error"
-      );
-
-
-      if (
-        error instanceof Error
-      ) {
-        setInboxError(
-          error.message
-        );
-      } else {
-        setInboxError(
-          "Unable to load Gmail inbox."
-        );
-      }
-    }
-  }
-
-
-  // =====================================================
-  // ASK THOZHAN
-  // =====================================================
-
-  async function askThozhan() {
-    const message =
-      assistantMessage.trim();
-
-
-    if (!message) {
-      return;
-    }
-
-
-    if (
-      groqStatus !== "connected" ||
-      gmailStatus !== "connected"
-    ) {
-      return;
-    }
-
-
-    try {
-      setAssistantStatus(
-        "loading"
-      );
-
-      setAssistantError("");
-
-      setAssistantResponse(
-        null
-      );
-
-
-      const supabase =
-        createClient();
-
-
-      const {
-        data: {
-          session,
+      const response = await fetch("/api/sync", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        error: sessionError,
-      } =
-        await supabase.auth.getSession();
-
-
-      if (
-        sessionError ||
-        !session
-      ) {
-        router.replace("/");
-        return;
-      }
-
-
-      const response =
-        await fetch(
-          "/api/assistant/chat",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-
-              Authorization:
-                `Bearer ${session.access_token}`,
-            },
-
-            body: JSON.stringify({
-              message,
-            }),
-
-            cache: "no-store",
-          }
-        );
-
-
-      const data =
-        await response.json();
-
-
-      if (!response.ok) {
-        throw new Error(
-          data.detail ??
-            "Thozhan was unable to process your request."
-        );
-      }
-
-
-      setAssistantResponse({
-        success:
-          data.success === true,
-
-        answer:
-          typeof data.answer ===
-          "string"
-            ? data.answer
-            : "",
-
-        tools_used:
-          Array.isArray(
-            data.tools_used
-          )
-            ? data.tools_used
-            : [],
+        body: JSON.stringify({ limit: 20 }),
       });
 
+      const data = (await response.json()) as SyncResult & { detail?: string };
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Unable to sync inbox.");
+      }
 
-      setAssistantStatus(
-        "success"
-      );
-
-
-      setAssistantMessage("");
-
-    } catch (error) {
-      console.error(
-        "Assistant request failed:",
-        error
-      );
-
-
-      setAssistantStatus(
-        "error"
-      );
-
-
-      if (
-        error instanceof Error
-      ) {
-        setAssistantError(
-          error.message
-        );
+      if ((data.processed ?? 0) > 0) {
+        const taskText = (data.tasks_added ?? 0) > 0
+          ? ` · ${data.tasks_added} task${data.tasks_added === 1 ? "" : "s"} added`
+          : "";
+        const remainingText = (data.remaining_new ?? 0) > 0
+          ? ` · ${data.remaining_new} more waiting`
+          : "";
+        setSyncMessage(`${data.processed} new email${data.processed === 1 ? "" : "s"} analysed${taskText}${remainingText}`);
       } else {
-        setAssistantError(
-          "Thozhan was unable to process your request."
-        );
+        setSyncMessage(data.message || "Inbox is already up to date.");
       }
+
+      await Promise.allSettled([
+        loadInbox(token),
+        loadIntelligence(token),
+      ]);
+    } catch (error) {
+      console.error("Inbox sync failed:", error);
+      setSyncMessage("");
+      setSyncError(error instanceof Error ? error.message : "Unable to sync inbox.");
+    } finally {
+      setIsSyncing(false);
     }
   }
 
+  async function askThozhan() {
+    const message = assistantMessage.trim();
+    if (!message || groqStatus !== "connected" || gmailStatus !== "connected") return;
 
-  function handleAssistantKeyDown(
-    event: React.KeyboardEvent<HTMLInputElement>
-  ) {
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
-      event.preventDefault();
+    try {
+      setAssistantStatus("loading");
+      setAssistantError("");
+      setAssistantResponse(null);
 
-      if (
-        assistantStatus !==
-          "loading"
-      ) {
-        void askThozhan();
+      const token = await getAccessToken();
+      if (!token) return;
+
+      const response = await fetch("/api/assistant/chat", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Thozhan was unable to process your request.");
       }
+
+      setAssistantResponse({
+        success: data.success === true,
+        answer: typeof data.answer === "string" ? data.answer : "",
+        tools_used: Array.isArray(data.tools_used) ? data.tools_used : [],
+      });
+      setAssistantStatus("success");
+      setAssistantMessage("");
+    } catch (error) {
+      console.error("Assistant request failed:", error);
+      setAssistantStatus("error");
+      setAssistantError(error instanceof Error ? error.message : "Thozhan was unable to process your request.");
     }
   }
-
-
-  // =====================================================
-  // LOGOUT
-  // =====================================================
 
   async function handleLogout() {
-    const supabase =
-      createClient();
-
+    const supabase = createClient();
     await supabase.auth.signOut();
-
     router.replace("/");
     router.refresh();
   }
 
-
-  // =====================================================
-  // FORMAT EMAIL DATE
-  // =====================================================
-
-  function formatEmailDate(
-    value: string
-  ) {
-    if (!value) {
-      return "";
-    }
-
-
-    const parsed =
-      new Date(value);
-
-
-    if (
-      Number.isNaN(
-        parsed.getTime()
-      )
-    ) {
-      return value;
-    }
-
-
-    return parsed.toLocaleString(
-      undefined,
-      {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }
-    );
+  function formatEmailDate(value: string) {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
   }
 
-
-  // =====================================================
-  // CREATE EMAIL PREVIEW
-  // =====================================================
-
-  function createPreview(
-    body: string
-  ) {
-    if (!body) {
-      return "No text preview available.";
-    }
-
-
-    const cleaned =
-      body
-        .replace(
-          /\s+/g,
-          " "
-        )
-        .trim();
-
-
-    if (
-      cleaned.length <= 220
-    ) {
-      return cleaned;
-    }
-
-
-    return (
-      cleaned.slice(
-        0,
-        220
-      ) + "..."
-    );
+  function createPreview(body: string) {
+    if (!body) return "No text preview available.";
+    const cleaned = body.replace(/\s+/g, " ").trim();
+    return cleaned.length <= 180 ? cleaned : `${cleaned.slice(0, 180)}…`;
   }
 
+  const filteredEmails = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return emails;
+    return emails.filter((message) =>
+      [message.subject, message.sender_name, message.sender_email, message.body]
+        .some((value) => (value || "").toLowerCase().includes(query))
+    );
+  }, [emails, searchQuery]);
 
-  const normalizedSearch =
-    searchQuery.trim().toLowerCase();
-
-  const filteredEmails =
-    normalizedSearch
-      ? emails.filter((message) => {
-          const searchable = [
-            message.subject,
-            message.sender_name,
-            message.sender_email,
-            message.body,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-
-          return searchable.includes(
-            normalizedSearch
-          );
-        })
-      : emails;
-
-  const notificationItems =
-    emails.slice(0, 5);
-
-  // =====================================================
-  // LOADING SCREEN
-  // =====================================================
+  const highPriorityCount = priorityEmails.filter((item) => item.priority === "high").length;
+  const pendingTaskCount = tasks.filter((task) => task.status !== "completed").length;
+  const meetingCount = meetings.length;
+  const allConnected = groqStatus === "connected" && gmailStatus === "connected" && calendarStatus === "connected";
+  const firstName = name.trim().split(/\s+/)[0] || "there";
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex items-center justify-center">
-
-        <div className="flex items-center gap-3 text-slate-500">
-
-          <Loader2
-            size={22}
-            className="animate-spin text-blue-600"
-          />
-
-          Loading Thozhan...
-
+      <main className="min-h-screen bg-[#F7F7F5] text-[#18181B] flex items-center justify-center">
+        <div className="flex items-center gap-3 text-zinc-500">
+          <ThozhanMark compact />
+          <Loader2 size={18} className="animate-spin" />
+          <span className="text-sm">Waking Thozhan…</span>
         </div>
-
       </main>
     );
   }
 
-
-  // =====================================================
-  // DASHBOARD
-  // =====================================================
-
   return (
-    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex">
-
-
-      {/* =========================================
-          SIDEBAR
-      ========================================= */}
-
-      <aside className="hidden md:flex w-64 border-r border-slate-200/80 bg-[#F5F5F7] flex-col p-5">
-
-
-        <div className="flex items-center gap-3 mb-10">
-
-          <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/60">
-
-            <Mail
-              size={20}
-            />
-
-          </div>
-
-
+    <main className="min-h-screen bg-[#F7F7F5] text-[#18181B] flex">
+      <aside className="hidden lg:flex w-[236px] shrink-0 border-r border-black/[0.06] bg-[#FBFBF9] flex-col px-4 py-5 sticky top-0 h-screen">
+        <button type="button" onClick={() => router.push("/dashboard")} className="flex items-center gap-3 px-2 text-left">
+          <ThozhanMark />
           <div>
-
-            <h1 className="font-semibold">
-              Thozhan
-            </h1>
-
-            <p className="text-xs text-slate-500">
-              AI Companion
-            </p>
-
+            <p className="font-semibold tracking-[-0.02em]">Thozhan</p>
+            <p className="text-[11px] text-zinc-400 mt-0.5">Always with you</p>
           </div>
+        </button>
 
-        </div>
-
-
-        <nav className="space-y-1 flex-1">
-
-          <SidebarItem
-            icon={
-              <Inbox />
-            }
-            label="Inbox"
-            active
-          />
-
-          <SidebarItem
-            icon={
-              <Star />
-            }
-            label="Priority"
-            onClick={() =>
-              router.push(
-                "/priority"
-              )
-            }
-          />
-
-          <SidebarItem
-            icon={
-              <CheckSquare />
-            }
-            label="Tasks"
-            onClick={() =>
-              router.push(
-                "/tasks"
-              )
-            }
-          />
-
-          <SidebarItem
-            icon={
-              <CalendarDays />
-            }
-            label="Meetings"
-            onClick={() =>
-              router.push(
-                "/meetings"
-              )
-            }
-          />
-
-
-          <div className="border-t border-slate-200 my-5" />
-
-
-          <SidebarItem
-            icon={
-              <Sparkles />
-            }
-            label="AI Assistant"
-            onClick={() => {
-              document
-                .getElementById("ai-assistant")
-                ?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                });
-            }}
-          />
-
-          <SidebarItem
-            icon={
-              <Settings />
-            }
-            label="Settings" onClick={() => router.push("/settings")} />
-
+        <nav className="mt-9 space-y-1">
+          <SidebarItem icon={<Inbox />} label="Inbox" active onClick={() => router.push("/dashboard")} />
+          <SidebarItem icon={<Star />} label="Priority" badge={highPriorityCount || undefined} onClick={() => router.push("/priority")} />
+          <SidebarItem icon={<CheckSquare />} label="Tasks" badge={pendingTaskCount || undefined} onClick={() => router.push("/tasks")} />
+          <SidebarItem icon={<CalendarDays />} label="Meetings" badge={meetingCount || undefined} onClick={() => router.push("/meetings")} />
         </nav>
 
+        <div className="my-5 border-t border-black/[0.06]" />
 
-        <div className="border-t border-slate-200 pt-5">
+        <nav className="space-y-1">
+          <SidebarItem icon={<Sparkles />} label="Ask Thozhan" onClick={() => document.getElementById("ask-thozhan")?.scrollIntoView({ behavior: "smooth" })} />
+          <SidebarItem icon={<Settings />} label="Settings" onClick={() => router.push("/settings")} />
+        </nav>
 
-
-          <div className="flex items-center gap-3 mb-4">
-
-            <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center">
-
-              <User
-                size={17}
-              />
-
+        <div className="mt-auto pt-5 border-t border-black/[0.06]">
+          <div className="flex items-center gap-3 px-2 mb-3">
+            <div className="w-9 h-9 rounded-full bg-[#ECECF8] text-[#5753C9] flex items-center justify-center">
+              <User size={16} />
             </div>
-
-
-            <div className="min-w-0">
-
-              <p className="text-sm font-medium truncate">
-                {name}
-              </p>
-
-              <p className="text-xs text-slate-500 truncate">
-                {email}
-              </p>
-
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">{name}</p>
+              <p className="text-[11px] text-zinc-400 truncate">{email}</p>
             </div>
-
           </div>
-
-
-          <button
-            onClick={
-              handleLogout
-            }
-            className="w-full flex items-center gap-3 text-slate-500 hover:text-[#1D1D1F] hover:bg-white rounded-lg p-2.5 transition text-sm"
-          >
-
-            <LogOut
-              size={17}
-            />
-
-            Sign out
-
+          <button type="button" onClick={handleLogout} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:bg-black/[0.035] hover:text-zinc-900 transition">
+            <LogOut size={16} /> Sign out
           </button>
-
         </div>
-
       </aside>
 
-
-      {/* =========================================
-          MAIN
-      ========================================= */}
-
       <section className="flex-1 min-w-0">
-
-
-        {/* HEADER */}
-
-        <header className="h-20 border-b border-slate-200/80 flex items-center justify-between px-6 lg:px-10">
-
-
-          <div className="md:hidden flex items-center gap-2">
-
-            <div className="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center">
-
-              <Mail
-                size={18}
-              />
-
-            </div>
-
-            <span className="font-semibold">
-              Thozhan
-            </span>
-
+        <header className="sticky top-0 z-30 h-[72px] border-b border-black/[0.06] bg-[#F7F7F5]/90 backdrop-blur-xl flex items-center justify-between gap-4 px-4 sm:px-6 xl:px-10">
+          <div className="flex lg:hidden items-center gap-2.5">
+            <ThozhanMark compact />
+            <span className="font-semibold">Thozhan</span>
           </div>
 
-
-          <div className="hidden md:flex items-center relative w-80">
-
-            <Search
-              size={17}
-              className="absolute left-4 text-slate-500"
-            />
-
+          <div className="hidden lg:flex items-center relative w-full max-w-[430px]">
+            <Search size={16} className="absolute left-4 text-zinc-400" />
             <input
               value={searchQuery}
-              onChange={(event) =>
-                setSearchQuery(event.target.value)
-              }
-              placeholder="Search your inbox..."
-              className="w-full bg-white/60 border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none placeholder:text-slate-500 focus:border-blue-500/60 transition"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search your inbox"
+              className="w-full h-10 rounded-full border border-black/[0.07] bg-white/75 pl-10 pr-4 text-sm outline-none transition focus:border-[#6B67D8]/40 focus:ring-4 focus:ring-[#6B67D8]/[0.07] placeholder:text-zinc-400"
             />
-
           </div>
 
-
-          <div className="flex items-center gap-3 relative">
-
+          <div className="relative flex items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                setShowNotifications(
-                  (current) => !current
-                );
-                setShowProfileMenu(false);
-              }}
-              className="relative w-10 h-10 border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:text-[#1D1D1F] hover:border-slate-300 transition"
-              aria-label="Notifications"
+              onClick={() => { setShowNotifications((value) => !value); setShowProfileMenu(false); }}
+              className="relative w-10 h-10 rounded-full border border-black/[0.07] bg-white/70 flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-white transition"
             >
-              <Bell size={18} />
-              {notificationItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-blue-600 text-[10px] text-[#1D1D1F] flex items-center justify-center">
-                  {notificationItems.length}
-                </span>
-              )}
+              <Bell size={17} />
+              {emails.length > 0 && <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#6662D9]" />}
             </button>
 
             <button
               type="button"
-              onClick={() => {
-                setShowProfileMenu(
-                  (current) => !current
-                );
-                setShowNotifications(false);
-              }}
-              className="w-9 h-9 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center hover:bg-blue-600/30 transition"
-              aria-label="Profile"
+              onClick={() => { setShowProfileMenu((value) => !value); setShowNotifications(false); }}
+              className="w-10 h-10 rounded-full bg-[#ECECF8] text-[#5753C9] flex items-center justify-center hover:bg-[#E4E4F5] transition"
             >
               <User size={17} />
             </button>
 
             {showNotifications && (
-              <div className="absolute right-12 top-12 z-50 w-80 max-h-96 overflow-y-auto border border-slate-200 bg-[#F5F5F7] shadow-2xl rounded-2xl p-3">
-                <div className="flex items-center justify-between px-2 py-2">
-                  <p className="font-medium">Notifications</p>
-                  <span className="text-xs text-slate-500">
-                    {notificationItems.length} recent
-                  </span>
+              <div className="absolute right-11 top-12 w-[330px] max-w-[calc(100vw-2rem)] rounded-2xl border border-black/[0.08] bg-white shadow-[0_18px_55px_rgba(24,24,27,0.12)] p-2">
+                <div className="px-3 py-2">
+                  <p className="text-sm font-semibold">Recent mail</p>
+                  <p className="text-xs text-zinc-400 mt-0.5">Your latest Gmail messages</p>
                 </div>
-
-                {notificationItems.length === 0 ? (
-                  <p className="text-sm text-slate-500 px-2 py-5">
-                    No recent inbox notifications.
-                  </p>
-                ) : (
-                  <div className="space-y-1">
-                    {notificationItems.map((message) => (
-                      <button
-                        type="button"
-                        key={message.id}
-                        onClick={() => {
-                          setSearchQuery(
-                            message.subject || message.sender_email
-                          );
-                          setShowNotifications(false);
-                        }}
-                        className="w-full text-left rounded-xl p-3 hover:bg-white transition"
-                      >
-                        <p className="text-sm font-medium truncate">
-                          {message.subject || "Email"}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1 truncate">
-                          {message.sender_name ||
-                            message.sender_email ||
-                            "Unknown sender"}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="max-h-80 overflow-auto">
+                  {emails.slice(0, 5).map((message) => (
+                    <div key={message.id} className="rounded-xl px-3 py-3 hover:bg-[#F7F7F5]">
+                      <p className="text-xs text-zinc-400 truncate">{message.sender_name || message.sender_email}</p>
+                      <p className="text-sm font-medium mt-1 truncate">{message.subject}</p>
+                    </div>
+                  ))}
+                  {emails.length === 0 && <p className="px-3 py-5 text-sm text-zinc-400">No recent messages.</p>}
+                </div>
               </div>
             )}
 
             {showProfileMenu && (
-              <div className="absolute right-0 top-12 z-50 w-64 border border-slate-200 bg-[#F5F5F7] shadow-2xl rounded-2xl p-3">
-                <div className="px-3 py-3 border-b border-slate-200">
-                  <p className="text-sm font-medium truncate">
-                    {name}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1 truncate">
-                    {email}
-                  </p>
+              <div className="absolute right-0 top-12 w-56 rounded-2xl border border-black/[0.08] bg-white shadow-[0_18px_55px_rgba(24,24,27,0.12)] p-2">
+                <div className="px-3 py-2 border-b border-black/[0.06] mb-1">
+                  <p className="text-sm font-medium truncate">{name}</p>
+                  <p className="text-xs text-zinc-400 truncate mt-0.5">{email}</p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => router.push("/settings")}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 mt-2 rounded-xl text-sm text-slate-700 hover:bg-white hover:text-[#1D1D1F] transition"
-                >
-                  <Settings size={16} />
-                  Settings
+                <button type="button" onClick={() => router.push("/settings")} className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm hover:bg-[#F7F7F5] transition">
+                  <Settings size={15} /> Settings
                 </button>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-white hover:text-[#1D1D1F] transition"
-                >
-                  <LogOut size={16} />
-                  Sign out
+                <button type="button" onClick={handleLogout} className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:bg-[#F7F7F5] hover:text-zinc-900 transition">
+                  <LogOut size={15} /> Sign out
                 </button>
               </div>
             )}
-
           </div>
-
         </header>
 
-
-        {/* DASHBOARD CONTENT */}
-
-        <div className="p-6 lg:p-10 max-w-7xl mx-auto">
-
-
-          <div>
-
-            <p className="text-blue-600 text-sm font-medium">
-              AI EMAIL WORKSPACE
-            </p>
-
-
-            <h2 className="text-3xl lg:text-4xl font-semibold mt-2 tracking-tight">
-              Welcome, {name}
-            </h2>
-
-
-            <p className="text-slate-500 mt-2">
-
-              Thozhan can now securely connect
-              your services and help manage
-              your inbox.
-
-            </p>
-
-          </div>
-
-
-          {/* =====================================
-              CONNECTION CARDS
-          ===================================== */}
-
-          {groqStatus === "connected" &&
-          gmailStatus === "connected" &&
-          calendarStatus === "connected" ? (
-            <div className="mt-7 inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              Thozhan ready
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 xl:px-10 py-7 lg:py-10">
+          <section className="relative overflow-hidden rounded-[30px] border border-black/[0.06] bg-white min-h-[310px] shadow-[0_18px_55px_rgba(24,24,27,0.045)]">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute -right-16 -top-28 w-[420px] h-[420px] rounded-full border border-[#706BDA]/10" />
+              <div className="absolute right-3 -top-8 w-[300px] h-[300px] rounded-full border border-[#706BDA]/10 rotate-12" />
+              <div className="absolute right-24 top-16 w-2 h-2 rounded-full bg-[#706BDA]/30" />
+              <div className="absolute right-64 top-9 w-1.5 h-1.5 rounded-full bg-zinc-300" />
+              <div className="absolute right-48 bottom-12 w-1 h-1 rounded-full bg-[#706BDA]/40" />
+              <div className="absolute -right-20 bottom-[-170px] w-[390px] h-[390px] rounded-full bg-[radial-gradient(circle_at_35%_30%,#EEEAFE_0%,#D9D8F6_35%,#A8A5E4_68%,#7773D5_100%)] opacity-85 shadow-[inset_-28px_-30px_60px_rgba(63,57,150,0.16)]" />
+              <div className="absolute right-[138px] top-[92px] rotate-[-9deg] hidden md:flex w-20 h-14 rounded-2xl bg-white border border-[#706BDA]/15 shadow-[0_14px_35px_rgba(74,69,165,0.13)] items-center justify-center text-[#625ED1]">
+                <Mail size={25} strokeWidth={1.6} />
+              </div>
+              <div className="absolute right-[170px] top-[72px] hidden md:block text-[11px] font-semibold text-[#625ED1]/50">த</div>
             </div>
-          ) : (
-            <>
-          <div className="grid lg:grid-cols-3 gap-5 mt-9">
 
+            <div className="relative z-10 p-6 sm:p-8 lg:p-10 max-w-[780px]">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase text-[#5F5BCB]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#6B67D8]" /> Thozhan · Always with you
+                </span>
+                {allConnected && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                    <CheckCircle2 size={12} /> Ready
+                  </span>
+                )}
+              </div>
 
-            {/* AI ENGINE */}
+              <h1 className="mt-5 text-[34px] sm:text-[44px] lg:text-[52px] leading-[1.04] tracking-[-0.045em] font-semibold max-w-[650px]">
+                Good to see you, {firstName}.
+              </h1>
+              <p className="mt-4 text-zinc-500 text-[15px] sm:text-base leading-7 max-w-[590px]">
+                Your inbox, actions and meetings — quietly organised in one place.
+              </p>
 
-            <ConnectionCard
-              icon={
-                <BrainCircuit />
-              }
-              title="AI Engine"
-              description={
-                groqStatus ===
-                "connected"
-                  ? "Groq is connected and ready to power Thozhan."
-                  : groqStatus ===
-                    "error"
-                  ? "Thozhan could not check your Groq connection."
-                  : "Connect your personal Groq API key to power Thozhan."
-              }
-              buttonText={
-                groqStatus ===
-                "connected"
-                  ? "Manage Groq"
-                  : "Configure Groq"
-              }
-              number="01"
-              status={
-                groqStatus
-              }
-              onClick={() =>
-                router.push(
-                  "/setup/ai"
-                )
-              }
-            />
+              <div className="mt-7 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => document.getElementById("ask-thozhan")?.scrollIntoView({ behavior: "smooth" })}
+                  className="inline-flex items-center gap-2 rounded-full bg-[#1E1E22] text-white px-5 py-3 text-sm font-medium hover:bg-black transition"
+                >
+                  <Sparkles size={15} /> Ask Thozhan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void syncAndReload()}
+                  disabled={isSyncing || gmailStatus !== "connected" || groqStatus !== "connected"}
+                  className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-5 py-3 text-sm font-medium text-zinc-700 hover:border-[#6B67D8]/30 hover:text-[#5F5BCB] disabled:opacity-50 transition"
+                >
+                  <RefreshCw size={15} className={isSyncing ? "animate-spin" : ""} />
+                  {isSyncing ? "Syncing…" : "Sync inbox"}
+                </button>
+              </div>
+            </div>
+          </section>
 
-
-            {/* GMAIL */}
-
-            <ConnectionCard
-              icon={
-                <MailCheck />
-              }
-              title="Gmail"
-              description={
-                gmailStatus ===
-                "connected"
-                  ? gmailAddress
-                    ? `Connected as ${gmailAddress}`
-                    : "Gmail is connected and ready."
-                  : gmailStatus ===
-                    "error"
-                  ? "Thozhan could not check your Gmail connection."
-                  : "Connect Gmail so Thozhan can securely retrieve your emails."
-              }
-              buttonText={
-                gmailStatus ===
-                "connected"
-                  ? "Manage Gmail"
-                  : "Connect Gmail"
-              }
-              number="02"
-              status={
-                gmailStatus
-              }
-              onClick={() =>
-                router.push(
-                  "/setup/gmail"
-                )
-              }
-            />
-
-
-            {/* CALENDAR */}
-
-            <ConnectionCard
-              icon={
-                <CalendarCheck />
-              }
-              title="Calendar"
-              description={
-                calendarStatus === "connected"
-                  ? calendarAddress
-                    ? `Connected as ${calendarAddress}`
-                    : "Google Calendar is connected and ready."
-                  : calendarStatus === "error"
-                  ? "Thozhan could not check your Calendar connection."
-                  : "Connect Google Calendar to manage appointments and meetings."
-              }
-              buttonText={
-                calendarStatus === "connected"
-                  ? "Manage Calendar"
-                  : "Connect Calendar"
-              }
-              number="03"
-              status={calendarStatus}
-              onClick={() =>
-                router.push("/meetings")
-              }
-            />
-
-          </div>
-
-            </>
+          {(syncMessage || syncError) && (
+            <div className={`mt-4 rounded-2xl border px-4 py-3 flex items-start gap-3 text-sm ${syncError ? "border-red-200 bg-red-50 text-red-700" : "border-[#DCDCF2] bg-[#F1F1FA] text-[#514DB9]"}`}>
+              {syncError ? <AlertCircle size={17} className="mt-0.5 shrink-0" /> : isSyncing ? <Loader2 size={17} className="animate-spin mt-0.5 shrink-0" /> : <CheckCircle2 size={17} className="mt-0.5 shrink-0" />}
+              <span>{syncError || syncMessage}</span>
+            </div>
           )}
 
-
-          {/* =====================================
-              INBOX
-          ===================================== */}
-
-          <div className="mt-10">
-
-
-            <div className="flex items-center justify-between gap-4 mb-5">
-
-              <div>
-
-                <h3 className="text-xl font-semibold">
-                  Your Inbox
-                </h3>
-
-
-                <p className="text-sm text-slate-500 mt-1">
-
-                  {gmailStatus ===
-                  "connected"
-                    ? "Your latest Gmail messages."
-                    : "Important emails and AI insights will appear here."}
-
-                </p>
-
-              </div>
-
-
-              {gmailStatus ===
-                "connected" && (
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    loadInbox()
-                  }
-                  disabled={
-                    inboxStatus ===
-                    "loading"
-                  }
-                  className="flex items-center gap-2 border border-slate-200 hover:border-slate-300 bg-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-700 hover:text-[#1D1D1F] transition disabled:opacity-50"
-                >
-
-                  <RefreshCw
-                    size={15}
-                    className={
-                      inboxStatus ===
-                      "loading"
-                        ? "animate-spin"
-                        : ""
-                    }
-                  />
-
-                  Refresh
-
-                </button>
-              )}
-
-            </div>
-
-
-            {/* GMAIL NOT CONNECTED */}
-
-            {gmailStatus ===
-              "not_connected" && (
-
-              <div className="border border-slate-200 bg-white/75 rounded-2xl min-h-72 flex items-center justify-center p-8">
-
-
-                <div className="text-center max-w-md">
-
-                  <div className="w-14 h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center mx-auto">
-
-                    <Inbox
-                      size={24}
-                      className="text-blue-600"
-                    />
-
-                  </div>
-
-
-                  <h4 className="text-lg font-medium mt-5">
-                    Connect Gmail to see your inbox
-                  </h4>
-
-
-                  <p className="text-slate-500 text-sm mt-2 leading-relaxed">
-
-                    Once Gmail is connected,
-                    Thozhan will securely retrieve
-                    your emails and help you
-                    understand what needs your
-                    attention.
-
-                  </p>
-
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      router.push(
-                        "/setup/gmail"
-                      )
-                    }
-                    className="mt-6 inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 px-5 py-2.5 rounded-xl text-sm font-medium transition"
-                  >
-
-                    Connect Gmail
-
-                    <ArrowRight
-                      size={16}
-                    />
-
-                  </button>
-
-                </div>
-
-              </div>
-            )}
-
-
-            {/* GMAIL STATUS ERROR */}
-
-            {gmailStatus ===
-              "error" && (
-
-              <div className="border border-red-500/20 bg-red-500/[0.04] rounded-2xl min-h-52 flex items-center justify-center p-8">
-
-                <div className="text-center max-w-md">
-
-                  <AlertCircle
-                    size={30}
-                    className="text-red-400 mx-auto"
-                  />
-
-                  <h4 className="text-lg font-medium mt-4">
-                    Gmail connection unavailable
-                  </h4>
-
-                  <p className="text-sm text-slate-500 mt-2">
-                    Make sure the Thozhan FastAPI
-                    backend is running and try
-                    refreshing the page.
-                  </p>
-
-                </div>
-
-              </div>
-            )}
-
-
-            {/* INBOX LOADING */}
-
-            {gmailStatus ===
-              "connected" &&
-              inboxStatus ===
-                "loading" && (
-
-              <div className="border border-slate-200 bg-white/75 rounded-2xl min-h-72 flex items-center justify-center">
-
-                <div className="flex items-center gap-3 text-slate-500">
-
-                  <Loader2
-                    size={20}
-                    className="animate-spin text-blue-600"
-                  />
-
-                  Reading your Gmail inbox...
-
-                </div>
-
-              </div>
-            )}
-
-
-            {/* INBOX ERROR */}
-
-            {gmailStatus ===
-              "connected" &&
-              inboxStatus ===
-                "error" && (
-
-              <div className="border border-red-500/20 bg-red-500/[0.04] rounded-2xl min-h-52 flex items-center justify-center p-8">
-
-                <div className="text-center max-w-lg">
-
-                  <AlertCircle
-                    size={30}
-                    className="text-red-400 mx-auto"
-                  />
-
-                  <h4 className="text-lg font-medium mt-4">
-                    Unable to read your inbox
-                  </h4>
-
-                  <p className="text-sm text-slate-500 mt-2">
-                    {inboxError}
-                  </p>
-
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      loadInbox()
-                    }
-                    className="mt-5 inline-flex items-center gap-2 border border-slate-300 hover:border-blue-500 rounded-xl px-4 py-2.5 text-sm transition"
-                  >
-
-                    <RefreshCw
-                      size={15}
-                    />
-
-                    Try again
-
-                  </button>
-
-                </div>
-
-              </div>
-            )}
-
-
-            {/* EMPTY INBOX */}
-
-            {gmailStatus ===
-              "connected" &&
-              inboxStatus ===
-                "loaded" &&
-              emails.length ===
-                0 && (
-
-              <div className="border border-slate-200 bg-white/75 rounded-2xl min-h-60 flex items-center justify-center p-8">
-
-                <div className="text-center">
-
-                  <Inbox
-                    size={28}
-                    className="text-slate-500 mx-auto"
-                  />
-
-                  <h4 className="font-medium mt-4">
-                    No emails found
-                  </h4>
-
-                  <p className="text-sm text-slate-500 mt-2">
-                    Thozhan did not find any
-                    messages in your Gmail inbox.
-                  </p>
-
-                </div>
-
-              </div>
-            )}
-
-
-            {/* EMAIL LIST */}
-
-            {gmailStatus ===
-              "connected" &&
-              inboxStatus ===
-                "loaded" &&
-              emails.length >
-                0 && (
-
-              <div className="border border-slate-200 bg-white/20 rounded-2xl overflow-hidden">
-
-                <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-
-                  <div className="flex items-center gap-2">
-
-                    <Inbox
-                      size={17}
-                      className="text-blue-600"
-                    />
-
-                    <span className="text-sm font-medium">
-                      Latest emails
-                    </span>
-
-                  </div>
-
-
-                  <span className="text-xs text-slate-500">
-                    {searchQuery.trim()
-                      ? `${filteredEmails.length} of ${emails.length} messages`
-                      : `${emails.length} messages`}
-                  </span>
-
-                </div>
-
-
-                <div className="divide-y divide-slate-800/80">
-
-                  {filteredEmails.length === 0 && searchQuery.trim() && (
-                    <div className="p-8 text-center">
-                      <Search
-                        size={24}
-                        className="text-slate-500 mx-auto"
-                      />
-                      <p className="text-sm text-slate-500 mt-3">
-                        No emails match “{searchQuery}”.
-                      </p>
-                    </div>
-                  )}
-
-                  {filteredEmails.map(
-                    (message) => (
-
-                    <div
-                      key={
-                        message.id
-                      }
-                      className="p-5 hover:bg-white/60 transition"
-                    >
-
-                      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
-
-
-                        <div className="min-w-0">
-
-                          <div className="flex items-center gap-2">
-
-                            <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-
-                              <Mail
-                                size={14}
-                              />
-
-                            </div>
-
-
-                            <div className="min-w-0">
-
-                              <p className="text-sm font-medium truncate">
-
-                                {message.sender_name ||
-                                  message.sender_email ||
-                                  "Unknown sender"}
-
-                              </p>
-
-
-                              {message.sender_name &&
-                                message.sender_email && (
-
-                                <p className="text-xs text-slate-500 truncate">
-                                  {message.sender_email}
-                                </p>
-                              )}
-
-                            </div>
-
-                          </div>
-
-                        </div>
-
-
-                        <p className="text-xs text-slate-500 shrink-0 lg:pt-1">
-                          {formatEmailDate(
-                            message.date
-                          )}
-                        </p>
-
-                      </div>
-
-
-                      <h4 className="font-medium mt-4 text-slate-100">
-                        {message.subject}
-                      </h4>
-
-
-                      <p className="text-sm text-slate-500 mt-2 leading-6">
-                        {createPreview(
-                          message.body
-                        )}
-                      </p>
-
-                    </div>
-                  ))}
-
-                </div>
-
-              </div>
-            )}
-
-          </div>
-
-
-          {/* =====================================
-              AI ASSISTANT
-          ===================================== */}
-
-          <div id="ai-assistant" className="mt-6 scroll-mt-24">
-
-
-            {assistantStatus ===
-              "success" &&
-              assistantResponse && (
-
-              <div className="mb-4 border border-blue-100 bg-blue-500/[0.04] rounded-2xl p-5">
-
-                <div className="flex items-center gap-2 text-blue-600">
-
-                  <Sparkles
-                    size={17}
-                  />
-
-                  <h3 className="text-sm font-medium">
-                    Thozhan
-                  </h3>
-
-                </div>
-
-
-                <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-200">
-                  {assistantResponse.answer}
-                </div>
-
-
-                {assistantResponse
-                  .tools_used
-                  .length > 0 && (
-
-                  <div className="mt-5 pt-4 border-t border-slate-200">
-
-                    <p className="text-xs text-slate-500">
-                      MCP tools used:{" "}
-                      {assistantResponse
-                        .tools_used
-                        .join(", ")}
-                    </p>
-
-                  </div>
-                )}
-
-              </div>
-            )}
-
-
-            {assistantStatus ===
-              "error" && (
-
-              <div className="mb-4 border border-red-500/20 bg-red-500/[0.04] rounded-2xl p-4">
-
-                <div className="flex items-start gap-3">
-
-                  <AlertCircle
-                    size={18}
-                    className="text-red-400 mt-0.5 shrink-0"
-                  />
-
-                  <div>
-
-                    <p className="text-sm font-medium text-red-400">
-                      Thozhan could not answer
-                    </p>
-
-                    <p className="text-sm text-slate-500 mt-1">
-                      {assistantError}
-                    </p>
-
-                  </div>
-
-                </div>
-
-              </div>
-            )}
-
-
-            <div className="border border-slate-200 bg-white/40 rounded-2xl p-4">
-
+          {!allConnected && (
+            <section className="mt-5 grid md:grid-cols-3 gap-3">
+              <ConnectionMiniCard title="AI engine" status={groqStatus} action="Configure" onClick={() => router.push("/setup/ai")} />
+              <ConnectionMiniCard title="Gmail" status={gmailStatus} detail={gmailAddress} action="Connect" onClick={() => router.push("/setup/gmail")} />
+              <ConnectionMiniCard title="Calendar" status={calendarStatus} action="Open meetings" onClick={() => router.push("/meetings")} />
+            </section>
+          )}
+
+          <section className="mt-6 grid md:grid-cols-3 gap-4">
+            <SummaryCard
+              eyebrow="Priority"
+              value={highPriorityCount}
+              label={highPriorityCount === 1 ? "email needs attention" : "emails need attention"}
+              icon={<Star size={18} />}
+              onClick={() => router.push("/priority")}
+            />
+            <SummaryCard
+              eyebrow="Tasks"
+              value={pendingTaskCount}
+              label={pendingTaskCount === 1 ? "open action" : "open actions"}
+              icon={<CheckSquare size={18} />}
+              onClick={() => router.push("/tasks")}
+            />
+            <SummaryCard
+              eyebrow="Meetings"
+              value={meetingCount}
+              label={meetingCount === 1 ? "detected request" : "detected requests"}
+              icon={<CalendarDays size={18} />}
+              onClick={() => router.push("/meetings")}
+            />
+          </section>
+
+          <section id="ask-thozhan" className="mt-6 rounded-[26px] border border-black/[0.06] bg-[#202024] text-white overflow-hidden shadow-[0_18px_55px_rgba(24,24,27,0.06)]">
+            <div className="p-5 sm:p-6">
               <div className="flex items-center gap-3">
-
-                <div className="w-10 h-10 shrink-0 bg-blue-50 rounded-xl flex items-center justify-center">
-
-                  {assistantStatus ===
-                    "loading" ? (
-
-                    <Loader2
-                      size={19}
-                      className="text-blue-600 animate-spin"
-                    />
-
-                  ) : (
-
-                    <Sparkles
-                      size={19}
-                      className="text-blue-600"
-                    />
-                  )}
-
+                <div className="w-10 h-10 rounded-2xl bg-white/[0.08] flex items-center justify-center text-[#C9C7FF]">
+                  <Sparkles size={18} />
                 </div>
-
-
-                <input
-                  value={
-                    assistantMessage
-                  }
-                  onChange={(event) =>
-                    setAssistantMessage(
-                      event.target.value
-                    )
-                  }
-                  onKeyDown={
-                    handleAssistantKeyDown
-                  }
-                  disabled={
-                    groqStatus !==
-                      "connected" ||
-                    gmailStatus !==
-                      "connected" ||
-                    assistantStatus ===
-                      "loading"
-                  }
-                  placeholder={
-                    groqStatus !==
-                    "connected"
-                      ? "Connect your AI engine to start using Thozhan..."
-                      : gmailStatus !==
-                        "connected"
-                      ? "Connect Gmail to start asking Thozhan about your inbox..."
-                      : assistantStatus ===
-                        "loading"
-                      ? "Thozhan is thinking..."
-                      : "Ask Thozhan about your inbox..."
-                  }
-                  className="flex-1 min-w-0 bg-transparent outline-none text-sm text-[#1D1D1F] placeholder:text-slate-500 disabled:cursor-not-allowed"
-                />
-
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    void askThozhan()
-                  }
-                  disabled={
-                    !assistantMessage.trim() ||
-                    groqStatus !==
-                      "connected" ||
-                    gmailStatus !==
-                      "connected" ||
-                    assistantStatus ===
-                      "loading"
-                  }
-                  className="inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 px-4 py-2 rounded-lg text-sm font-medium transition"
-                >
-
-                  {assistantStatus ===
-                    "loading" ? (
-
-                    <>
-                      <Loader2
-                        size={15}
-                        className="animate-spin"
-                      />
-                      Thinking
-                    </>
-
-                  ) : (
-
-                    <>
-                      <Send
-                        size={15}
-                      />
-                      Ask
-                    </>
-                  )}
-
-                </button>
-
+                <div>
+                  <h2 className="font-semibold tracking-[-0.02em]">Ask Thozhan</h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">Ask naturally about your inbox.</p>
+                </div>
               </div>
 
-
-              {groqStatus ===
-                "connected" &&
-                gmailStatus ===
-                  "connected" && (
-
-                <p className="text-xs text-slate-500 mt-3 ml-[52px]">
-                  Press Enter to send. Thozhan can use your Gmail MCP tools when needed.
-                </p>
+              {assistantStatus === "success" && assistantResponse && (
+                <div className="mt-5 rounded-2xl bg-white/[0.055] border border-white/[0.07] p-4 sm:p-5">
+                  <p className="text-sm leading-7 text-zinc-200 whitespace-pre-wrap">{assistantResponse.answer}</p>
+                  {assistantResponse.tools_used.length > 0 && (
+                    <p className="mt-4 pt-3 border-t border-white/[0.07] text-[11px] text-zinc-500">
+                      Tools used: {assistantResponse.tools_used.join(", ")}
+                    </p>
+                  )}
+                </div>
               )}
 
+              {assistantStatus === "error" && (
+                <div className="mt-5 rounded-2xl border border-red-400/15 bg-red-400/[0.06] p-4 text-sm text-red-200 flex gap-3">
+                  <AlertCircle size={17} className="shrink-0 mt-0.5" /> {assistantError}
+                </div>
+              )}
+
+              <div className="mt-5 flex items-center gap-2 rounded-2xl bg-white p-2 pl-4 shadow-sm">
+                <input
+                  value={assistantMessage}
+                  onChange={(event) => setAssistantMessage(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey && assistantStatus !== "loading") {
+                      event.preventDefault();
+                      void askThozhan();
+                    }
+                  }}
+                  disabled={groqStatus !== "connected" || gmailStatus !== "connected" || assistantStatus === "loading"}
+                  placeholder={
+                    groqStatus !== "connected"
+                      ? "Connect your AI engine to use Thozhan"
+                      : gmailStatus !== "connected"
+                        ? "Connect Gmail to ask about your inbox"
+                        : assistantStatus === "loading"
+                          ? "Thozhan is thinking…"
+                          : "What needs my attention today?"
+                  }
+                  className="flex-1 min-w-0 bg-transparent outline-none text-sm text-zinc-900 placeholder:text-zinc-400 disabled:cursor-not-allowed"
+                />
+                <button
+                  type="button"
+                  onClick={() => void askThozhan()}
+                  disabled={!assistantMessage.trim() || groqStatus !== "connected" || gmailStatus !== "connected" || assistantStatus === "loading"}
+                  className="w-10 h-10 shrink-0 rounded-xl bg-[#6965D7] text-white flex items-center justify-center hover:bg-[#5C58C9] disabled:bg-zinc-200 disabled:text-zinc-400 transition"
+                >
+                  {assistantStatus === "loading" ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-[26px] border border-black/[0.06] bg-white overflow-hidden shadow-[0_18px_55px_rgba(24,24,27,0.035)]">
+            <div className="px-5 sm:px-6 py-5 border-b border-black/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Inbox size={17} className="text-[#625ED1]" />
+                  <h2 className="font-semibold tracking-[-0.02em]">Intelligent inbox</h2>
+                </div>
+                <p className="text-xs text-zinc-400 mt-1">Your latest Gmail messages, ready for Thozhan.</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="lg:hidden relative flex-1 sm:w-56">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search"
+                    className="w-full h-9 rounded-full bg-[#F7F7F5] pl-9 pr-3 text-xs outline-none"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void syncAndReload()}
+                  disabled={isSyncing || gmailStatus !== "connected" || groqStatus !== "connected"}
+                  className="h-9 inline-flex items-center gap-2 rounded-full border border-black/[0.07] px-3.5 text-xs font-medium text-zinc-600 hover:text-[#5F5BCB] hover:border-[#6B67D8]/30 disabled:opacity-50 transition"
+                >
+                  <RefreshCw size={13} className={isSyncing ? "animate-spin" : ""} />
+                  {isSyncing ? "Syncing" : "Sync"}
+                </button>
+              </div>
             </div>
 
-          </div>
+            {gmailStatus === "not_connected" && (
+              <EmptyState icon={<Mail size={21} />} title="Connect Gmail to see your inbox" description="Once Gmail is connected, Thozhan can read your latest messages and organise what matters." button="Connect Gmail" onClick={() => router.push("/setup/gmail")} />
+            )}
 
+            {gmailStatus === "error" && (
+              <EmptyState icon={<AlertCircle size={21} />} title="Gmail connection unavailable" description="Thozhan could not check your Gmail connection. Make sure the backend is available and try again." button="Try again" onClick={() => window.location.reload()} />
+            )}
+
+            {gmailStatus === "connected" && inboxStatus === "loading" && (
+              <div className="min-h-56 flex items-center justify-center text-sm text-zinc-400 gap-3">
+                <Loader2 size={18} className="animate-spin text-[#625ED1]" /> Reading your inbox…
+              </div>
+            )}
+
+            {gmailStatus === "connected" && inboxStatus === "error" && (
+              <EmptyState icon={<AlertCircle size={21} />} title="Unable to read your inbox" description={inboxError} button="Try again" onClick={() => void loadInbox()} />
+            )}
+
+            {gmailStatus === "connected" && inboxStatus === "loaded" && filteredEmails.length === 0 && (
+              <EmptyState icon={<Inbox size={21} />} title={searchQuery ? "No matching emails" : "Your inbox is quiet"} description={searchQuery ? "Try another sender, subject or keyword." : "No recent Gmail messages were found."} />
+            )}
+
+            {gmailStatus === "connected" && inboxStatus === "loaded" && filteredEmails.length > 0 && (
+              <div className="divide-y divide-black/[0.055]">
+                {filteredEmails.map((message) => (
+                  <article key={message.id} className="px-5 sm:px-6 py-5 hover:bg-[#FAFAF8] transition">
+                    <div className="flex gap-4">
+                      <div className="hidden sm:flex w-10 h-10 shrink-0 rounded-2xl bg-[#F0F0F8] text-[#625ED1] items-center justify-center">
+                        <Mail size={16} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5 sm:gap-4">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{message.sender_name || message.sender_email || "Unknown sender"}</p>
+                            {message.sender_name && message.sender_email && <p className="text-[11px] text-zinc-400 truncate mt-0.5">{message.sender_email}</p>}
+                          </div>
+                          <time className="text-[11px] text-zinc-400 shrink-0">{formatEmailDate(message.date)}</time>
+                        </div>
+                        <h3 className="mt-3 text-[15px] font-semibold tracking-[-0.01em]">{message.subject || "(No subject)"}</h3>
+                        <p className="mt-1.5 text-sm leading-6 text-zinc-500">{createPreview(message.body)}</p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <div className="mt-6 rounded-[26px] overflow-hidden bg-[#24242A] text-white relative min-h-[150px]">
+            <div className="absolute inset-0 opacity-70 bg-[radial-gradient(circle_at_80%_25%,rgba(116,111,218,0.45),transparent_24%),radial-gradient(circle_at_90%_90%,rgba(84,79,175,0.28),transparent_28%)]" />
+            <div className="absolute right-12 top-7 w-1.5 h-1.5 rounded-full bg-white/50" />
+            <div className="absolute right-28 bottom-8 w-1 h-1 rounded-full bg-white/30" />
+            <div className="relative z-10 p-6 sm:p-7 flex items-center justify-between gap-6">
+              <div>
+                <p className="text-[11px] tracking-[0.18em] uppercase text-[#C8C6FF] font-semibold">Thozhan</p>
+                <h2 className="mt-2 text-xl sm:text-2xl font-semibold tracking-[-0.03em]">A calmer inbox. A more intentional you.</h2>
+                <p className="mt-2 text-sm text-zinc-400">Mail comes in. Thozhan helps you see what matters.</p>
+              </div>
+              <div className="hidden sm:block"><ThozhanMark dark /></div>
+            </div>
+          </div>
         </div>
 
+        <nav className="lg:hidden sticky bottom-0 z-30 border-t border-black/[0.07] bg-[#FBFBF9]/95 backdrop-blur-xl grid grid-cols-4 px-2 py-2">
+          <MobileNav icon={<Inbox />} label="Inbox" active onClick={() => router.push("/dashboard")} />
+          <MobileNav icon={<Star />} label="Priority" onClick={() => router.push("/priority")} />
+          <MobileNav icon={<CheckSquare />} label="Tasks" onClick={() => router.push("/tasks")} />
+          <MobileNav icon={<CalendarDays />} label="Meetings" onClick={() => router.push("/meetings")} />
+        </nav>
       </section>
-
     </main>
   );
 }
 
-
-/* =============================================
-   SIDEBAR ITEM
-============================================= */
-
-function SidebarItem({
-  icon,
-  label,
-  active = false,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-  onClick?: () => void;
-}) {
+function ThozhanMark({ compact = false, dark = false }: { compact?: boolean; dark?: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${
-        active
-          ? "bg-blue-600/10 text-blue-600"
-          : "text-slate-500 hover:text-[#1D1D1F] hover:bg-white"
-      }`}
-    >
-
-      <span className="[&>svg]:w-[18px] [&>svg]:h-[18px]">
-        {icon}
-      </span>
-
-      {label}
-
-    </button>
-  );
-}
-
-
-/* =============================================
-   CONNECTION CARD
-============================================= */
-
-function ConnectionCard({
-  icon,
-  title,
-  description,
-  buttonText,
-  number,
-  status,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  buttonText: string;
-  number: string;
-
-  status:
-    | "loading"
-    | "connected"
-    | "not_connected"
-    | "error";
-
-  onClick?: () => void;
-}) {
-
-
-  const isConnected =
-    status === "connected";
-
-
-  return (
-    <div
-      className={`border rounded-2xl p-6 transition ${
-        isConnected
-          ? "border-green-500/20 bg-green-500/[0.03]"
-          : "border-slate-200 bg-white/40 hover:border-slate-300"
-      }`}
-    >
-
-
-      <div className="flex items-start justify-between">
-
-
-        <div
-          className={`w-11 h-11 rounded-xl flex items-center justify-center [&>svg]:w-5 ${
-            isConnected
-              ? "bg-green-500/10 text-green-400"
-              : "bg-blue-50 text-blue-600"
-          }`}
-        >
-          {icon}
-        </div>
-
-
-        <span className="text-xs text-slate-500">
-          {number}
-        </span>
-
+    <div className={`relative ${compact ? "w-9 h-9" : "w-11 h-11"} shrink-0`} aria-label="Thozhan">
+      <div className={`absolute inset-[2px] rounded-full border ${dark ? "border-white/20" : "border-[#706BDA]/25"}`} />
+      <div className={`absolute left-0 top-1/2 w-full h-[1px] ${dark ? "bg-white/15" : "bg-[#706BDA]/15"} rotate-[-28deg]`} />
+      <div className={`absolute -right-[1px] top-[7px] w-2 h-2 rounded-full ${dark ? "bg-[#C9C7FF]" : "bg-[#6965D7]"} shadow-[0_0_0_3px_rgba(105,101,215,0.10)]`} />
+      <div className={`absolute inset-[7px] rounded-[11px] flex items-center justify-center font-semibold ${compact ? "text-[14px]" : "text-[17px]"} ${dark ? "bg-white text-[#5753C9]" : "bg-[#ECECF8] text-[#5753C9]"}`}>
+        த
       </div>
-
-
-      <div className="flex items-center gap-2 mt-5">
-
-
-        <h3 className="font-semibold">
-          {title}
-        </h3>
-
-
-        {status ===
-          "loading" && (
-
-          <span className="flex items-center gap-1 text-[11px] bg-slate-800 text-slate-500 px-2 py-1 rounded-full">
-
-            <Loader2
-              size={11}
-              className="animate-spin"
-            />
-
-            Checking
-
-          </span>
-        )}
-
-
-        {status ===
-          "connected" && (
-
-          <span className="flex items-center gap-1 text-[11px] bg-green-500/10 text-green-400 px-2 py-1 rounded-full">
-
-            <CheckCircle2
-              size={11}
-            />
-
-            Connected
-
-          </span>
-        )}
-
-
-        {status ===
-          "not_connected" && (
-
-          <span className="text-[11px] bg-slate-800 text-slate-500 px-2 py-1 rounded-full">
-
-            Not connected
-
-          </span>
-        )}
-
-
-        {status ===
-          "error" && (
-
-          <span className="flex items-center gap-1 text-[11px] bg-red-500/10 text-red-400 px-2 py-1 rounded-full">
-
-            <AlertCircle
-              size={11}
-            />
-
-            Error
-
-          </span>
-        )}
-
-      </div>
-
-
-      <p className="text-sm text-slate-500 mt-2 leading-relaxed min-h-10">
-        {description}
-      </p>
-
-
-      <button
-        type="button"
-        onClick={
-          onClick
-        }
-        className={`mt-6 w-full border rounded-xl py-2.5 text-sm transition ${
-          isConnected
-            ? "border-green-500/20 text-green-400 hover:bg-green-500/10"
-            : "border-slate-300 hover:border-blue-500 hover:text-blue-600"
-        }`}
-      >
-
-        {buttonText}
-
-      </button>
-
     </div>
   );
 }
 
+function SidebarItem({ icon, label, active = false, badge, onClick }: { icon: React.ReactNode; label: string; active?: boolean; badge?: number; onClick?: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-[#ECECF8] text-[#504CB8] font-medium" : "text-zinc-500 hover:bg-black/[0.035] hover:text-zinc-900"}`}>
+      <span className="[&>svg]:w-[17px] [&>svg]:h-[17px]">{icon}</span>
+      <span className="flex-1 text-left">{label}</span>
+      {badge !== undefined && <span className={`min-w-5 h-5 px-1.5 rounded-full text-[10px] flex items-center justify-center ${active ? "bg-white text-[#504CB8]" : "bg-zinc-100 text-zinc-500"}`}>{badge}</span>}
+    </button>
+  );
+}
+
+function MobileNav({ icon, label, active = false, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={`flex flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-[10px] ${active ? "text-[#5753C9]" : "text-zinc-400"}`}>
+      <span className="[&>svg]:w-[17px] [&>svg]:h-[17px]">{icon}</span>{label}
+    </button>
+  );
+}
+
+function SummaryCard({ eyebrow, value, label, icon, onClick }: { eyebrow: string; value: number; label: string; icon: React.ReactNode; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="group text-left rounded-[24px] border border-black/[0.06] bg-white p-5 sm:p-6 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(24,24,27,0.06)] transition-all">
+      <div className="flex items-start justify-between gap-4">
+        <div className="w-10 h-10 rounded-2xl bg-[#F0F0F8] text-[#625ED1] flex items-center justify-center">{icon}</div>
+        <ChevronRight size={17} className="text-zinc-300 group-hover:text-[#625ED1] group-hover:translate-x-0.5 transition" />
+      </div>
+      <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">{eyebrow}</p>
+      <div className="mt-1 flex items-end gap-2">
+        <span className="text-3xl font-semibold tracking-[-0.04em]">{value}</span>
+        <span className="text-sm text-zinc-500 pb-1">{label}</span>
+      </div>
+    </button>
+  );
+}
+
+function ConnectionMiniCard({ title, status, detail, action, onClick }: { title: string; status: ConnectionStatus; detail?: string; action: string; onClick: () => void }) {
+  const connected = status === "connected";
+  return (
+    <div className="rounded-2xl border border-black/[0.06] bg-white px-4 py-4 flex items-center gap-3">
+      <div className={`w-2 h-2 rounded-full shrink-0 ${connected ? "bg-emerald-500" : status === "loading" ? "bg-zinc-300" : status === "error" ? "bg-red-400" : "bg-amber-400"}`} />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-[11px] text-zinc-400 truncate mt-0.5">{connected ? detail || "Connected" : status === "loading" ? "Checking…" : status === "error" ? "Connection error" : "Not connected"}</p>
+      </div>
+      {!connected && <button type="button" onClick={onClick} className="text-xs font-medium text-[#5F5BCB] hover:text-[#4743A9]">{action}</button>}
+    </div>
+  );
+}
+
+function EmptyState({ icon, title, description, button, onClick }: { icon: React.ReactNode; title: string; description: string; button?: string; onClick?: () => void }) {
+  return (
+    <div className="min-h-60 flex items-center justify-center p-8 text-center">
+      <div className="max-w-md">
+        <div className="w-11 h-11 rounded-2xl bg-[#F0F0F8] text-[#625ED1] flex items-center justify-center mx-auto">{icon}</div>
+        <h3 className="mt-4 font-semibold">{title}</h3>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">{description}</p>
+        {button && onClick && (
+          <button type="button" onClick={onClick} className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#1E1E22] text-white px-4 py-2.5 text-sm font-medium hover:bg-black transition">
+            {button} <ArrowRight size={14} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

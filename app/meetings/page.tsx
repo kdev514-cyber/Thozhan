@@ -1,5 +1,7 @@
 "use client";
 
+import ThozhanLogo from "@/components/thozhan/ThozhanLogo";
+
 import {
   Suspense,
   useCallback,
@@ -84,6 +86,9 @@ function MeetingsPageContent() {
     useState<CalendarEvent[]>([]);
   const [loading, setLoading] =
     useState(true);
+
+  const [syncing, setSyncing] =
+    useState(false);
   const [connecting, setConnecting] =
     useState(false);
   const [error, setError] =
@@ -466,7 +471,11 @@ function MeetingsPageContent() {
 
   async function syncAndReload() {
     try {
+      setSyncing(true);
+      setError("");
+
       const supabase = createClient();
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -476,28 +485,34 @@ function MeetingsPageContent() {
         return;
       }
 
-      const response = await fetch(
-        "/api/sync",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ limit: 20 }),
-        }
-      );
+      const response = await fetch("/api/sync", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ limit: 20 }),
+      });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail ?? "Unable to sync inbox.");
+        throw new Error(
+          data.detail ?? "Unable to sync inbox."
+        );
       }
 
       await loadPage();
     } catch (error) {
       console.error("Inbox sync failed:", error);
-      setError(error instanceof Error ? error.message : "Unable to sync inbox.");
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sync inbox."
+      );
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -549,9 +564,7 @@ function MeetingsPageContent() {
           }
           className="flex items-center gap-3 mb-10 text-left"
         >
-          <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/60">
-            <Mail size={20} />
-          </div>
+          <ThozhanLogo compact />
           <div>
             <h1 className="font-semibold">
               Thozhan
@@ -643,21 +656,15 @@ function MeetingsPageContent() {
 
           <button
             type="button"
-            onClick={() =>
-              void syncAndReload()
-            }
-            disabled={loading}
+            onClick={() => void syncAndReload()}
+            disabled={loading || syncing}
             className="inline-flex items-center gap-2 border border-slate-200 hover:border-blue-500 bg-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-700 hover:text-[#1D1D1F] transition disabled:opacity-50"
           >
             <RefreshCw
               size={15}
-              className={
-                loading
-                  ? "animate-spin"
-                  : ""
-              }
+              className={syncing ? "animate-spin" : ""}
             />
-            Refresh
+            {syncing ? "Syncing..." : "Refresh"}
           </button>
         </header>
 

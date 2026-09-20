@@ -1,5 +1,7 @@
 "use client";
 
+import ThozhanLogo from "@/components/thozhan/ThozhanLogo";
+
 import {
   useCallback,
   useEffect,
@@ -434,9 +436,9 @@ export default function TasksPage() {
 
 
   return (
-    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex">
+    <main className="min-h-screen bg-[#F7F7F5] text-[#18181B] flex">
 
-      <aside className="hidden md:flex w-64 border-r border-slate-200/80 bg-[#F5F5F7] flex-col p-5">
+      <aside className="hidden md:flex w-56 border-r border-black/[0.06] bg-[#F1F0ED] flex-col p-4">
 
         <button
           type="button"
@@ -445,21 +447,17 @@ export default function TasksPage() {
               "/dashboard"
             )
           }
-          className="flex items-center gap-3 mb-10 text-left"
+          className="flex items-center gap-3 mb-9 px-1 py-1 text-left"
         >
-          <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/60">
-            <Mail
-              size={20}
-            />
-          </div>
+          <ThozhanLogo compact />
 
           <div>
             <h1 className="font-semibold">
               Thozhan
             </h1>
 
-            <p className="text-xs text-slate-500">
-              AI Companion
+            <p className="text-[9px] font-medium uppercase tracking-[0.16em] text-zinc-400">
+              ALWAYS WITH YOU
             </p>
           </div>
         </button>
@@ -511,7 +509,7 @@ export default function TasksPage() {
             }
           />
 
-          <div className="border-t border-slate-200 my-5" />
+          <div className="border-t border-black/[0.06] my-5" />
 
           <SidebarItem
             icon={
@@ -534,11 +532,11 @@ export default function TasksPage() {
         </nav>
 
 
-        <div className="border-t border-slate-200 pt-5">
+        <div className="border-t border-black/[0.06] pt-5">
 
           <div className="flex items-center gap-3 mb-4">
 
-            <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-full bg-[#ECECF8] text-[#5753C9] flex items-center justify-center">
               <User
                 size={17}
               />
@@ -549,7 +547,7 @@ export default function TasksPage() {
                 {name}
               </p>
 
-              <p className="text-xs text-slate-500 truncate">
+              <p className="text-xs text-zinc-500 truncate">
                 {email}
               </p>
             </div>
@@ -562,7 +560,7 @@ export default function TasksPage() {
             onClick={
               handleLogout
             }
-            className="w-full flex items-center gap-3 text-slate-500 hover:text-[#1D1D1F] hover:bg-white rounded-lg p-2.5 transition text-sm"
+            className="w-full flex items-center gap-3 text-zinc-500 hover:text-zinc-950 hover:bg-white/70 rounded-xl p-2.5 transition text-sm"
           >
             <LogOut
               size={17}
@@ -578,7 +576,7 @@ export default function TasksPage() {
 
       <section className="flex-1 min-w-0">
 
-        <header className="min-h-20 border-b border-slate-200/80 flex items-center justify-between gap-4 px-6 lg:px-10 py-4">
+        <header className="min-h-20 border-b border-black/[0.06] flex items-center justify-between gap-4 px-6 lg:px-10 py-4 bg-[#F7F7F5]/90 backdrop-blur-xl">
 
           <div>
             <p className="text-sm text-slate-500">
@@ -597,7 +595,7 @@ export default function TasksPage() {
               void syncAndReload()
             }
             disabled={status === "loading" || isSyncing}
-            className="inline-flex items-center gap-2 border border-slate-200 hover:border-blue-500 bg-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-700 hover:text-[#1D1D1F] transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:opacity-50"
           >
             <RefreshCw
               size={15}
@@ -619,15 +617,15 @@ export default function TasksPage() {
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
 
             <div>
-              <p className="text-blue-600 text-sm font-medium">
+              <p className="text-[#5753C9] text-[11px] font-semibold uppercase tracking-[0.14em]">
                 AI TASK EXTRACTION
               </p>
 
-              <h2 className="text-3xl lg:text-4xl font-semibold mt-2 tracking-tight">
+              <h2 className="text-3xl lg:text-4xl font-semibold mt-2 tracking-[-0.04em] text-zinc-950">
                 Your email action list
               </h2>
 
-              <p className="text-slate-500 mt-2 max-w-2xl">
+              <p className="text-zinc-500 mt-3 max-w-2xl leading-6">
                 Thozhan turns concrete actions in your latest
                 emails into a focused task list without treating
                 every notification as work.
@@ -673,20 +671,20 @@ export default function TasksPage() {
 
 
           {status === "loading" && (
-            <div className="mt-10 border border-slate-200 bg-white/75 rounded-2xl min-h-72 flex items-center justify-center">
+            <div className="mt-10 border border-black/[0.06] bg-white rounded-[22px] min-h-72 flex items-center justify-center">
 
               <div className="text-center">
 
                 <Loader2
                   size={26}
-                  className="animate-spin text-blue-600 mx-auto"
+                  className="animate-spin text-[#5753C9] mx-auto"
                 />
 
-                <p className="text-slate-700 mt-4">
+                <p className="text-zinc-800 mt-4">
                   Thozhan is extracting tasks from your emails...
                 </p>
 
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-zinc-500 mt-2">
                   Only concrete actions will become tasks.
                 </p>
 
@@ -733,7 +731,7 @@ export default function TasksPage() {
           {status === "loaded" &&
             tasks.length === 0 && (
 
-            <div className="mt-10 border border-slate-200 bg-white/75 rounded-2xl min-h-64 flex items-center justify-center p-8">
+            <div className="mt-10 border border-black/[0.06] bg-white rounded-[22px] min-h-64 flex items-center justify-center p-8">
 
               <div className="text-center max-w-md">
 
@@ -886,12 +884,12 @@ function TaskSection({
             {title}
           </h3>
 
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-zinc-500 mt-1">
             {description}
           </p>
         </div>
 
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-zinc-500">
           {tasks.length}{" "}
           {tasks.length === 1
             ? "task"
@@ -950,7 +948,7 @@ function TaskCard({
   updating: boolean;
 }) {
   return (
-    <article className="border border-slate-200 bg-white/80 rounded-2xl p-5 hover:border-slate-300 transition">
+    <article className="border border-black/[0.06] bg-white rounded-[22px] p-5 hover:border-[#706BDA]/20 hover:shadow-[0_12px_35px_rgba(24,24,27,0.05)] transition">
 
       <div className="flex items-start gap-4">
 
@@ -969,8 +967,8 @@ function TaskCard({
           }
           className={`w-10 h-10 shrink-0 border rounded-xl flex items-center justify-center transition disabled:opacity-50 ${
             task.status === "completed"
-              ? "border-green-500/30 bg-green-500/10 text-green-400"
-              : "border-slate-300 bg-[#F5F5F7] text-slate-500 hover:border-blue-500 hover:text-blue-600"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+              : "border-black/[0.08] bg-[#F8F8F7] text-zinc-500 hover:border-[#706BDA]/30 hover:bg-[#ECECF8] hover:text-[#5753C9]"
           }`}
         >
           {updating ? (
@@ -1001,7 +999,7 @@ function TaskCard({
             />
 
             {task.requires_reply && (
-              <span className="inline-flex items-center gap-1.5 border border-blue-100 bg-blue-50 text-blue-600 rounded-full px-2.5 py-1 text-[11px] font-medium">
+              <span className="inline-flex items-center gap-1.5 border border-[#706BDA]/10 bg-[#ECECF8] text-[#5753C9] rounded-full px-2.5 py-1 text-[11px] font-medium">
                 <MessageSquareReply
                   size={11}
                 />
@@ -1015,8 +1013,8 @@ function TaskCard({
           <h4
             className={`font-semibold mt-3 ${
               task.status === "completed"
-                ? "text-slate-500 line-through"
-                : "text-slate-100"
+                ? "text-zinc-400 line-through"
+                : "text-zinc-950"
             }`}
           >
             {task.title}
@@ -1024,7 +1022,7 @@ function TaskCard({
 
 
           {task.description && (
-            <p className="text-sm text-slate-500 leading-6 mt-2">
+            <p className="text-sm text-zinc-500 leading-6 mt-2">
               {task.description}
             </p>
           )}
@@ -1062,19 +1060,19 @@ function TaskCard({
       </div>
 
 
-      <div className="mt-4 border border-slate-200/80 bg-slate-50 rounded-xl p-4">
+      <div className="mt-4 border border-black/[0.04] bg-[#F8F8F7] rounded-xl p-4">
 
         <p className="text-[11px] uppercase tracking-wide text-slate-500">
           Source email
         </p>
 
-        <p className="text-sm text-slate-700 mt-2">
+        <p className="text-sm text-zinc-700 mt-2">
           {task.source_subject ||
             "(No subject)"}
         </p>
 
         {task.source_date && (
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-zinc-500 mt-1">
             {formatSourceDate(
               task.source_date
             )}
@@ -1085,13 +1083,13 @@ function TaskCard({
 
 
       {task.reason && (
-        <div className="mt-4 pt-4 border-t border-slate-200">
+        <div className="mt-4 pt-4 border-t border-black/[0.06]">
 
           <p className="text-[11px] uppercase tracking-wide text-slate-500">
             Why this is a task
           </p>
 
-          <p className="text-xs text-slate-500 leading-5 mt-2">
+          <p className="text-xs text-zinc-500 leading-5 mt-2">
             {task.reason}
           </p>
 
@@ -1113,7 +1111,7 @@ function InfoBox({
   value: string;
 }) {
   return (
-    <div className="border border-slate-200/80 bg-slate-100 rounded-xl p-3">
+    <div className="border border-black/[0.04] bg-[#F8F8F7] rounded-xl p-3">
 
       <div className="flex items-center gap-2 text-slate-500">
 
@@ -1127,7 +1125,7 @@ function InfoBox({
 
       </div>
 
-      <p className="text-sm text-slate-700 mt-2 leading-5">
+      <p className="text-sm text-zinc-700 mt-2 leading-5">
         {value}
       </p>
 
@@ -1143,10 +1141,10 @@ function PriorityBadge({
 }) {
   const styles =
     priority === "high"
-      ? "bg-red-500/10 text-red-400 border-red-500/20"
+      ? "bg-red-50 text-red-600 border-red-100"
       : priority === "normal"
-      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-      : "bg-slate-800 text-slate-500 border-slate-300";
+      ? "bg-[#ECECF8] text-[#5753C9] border-[#706BDA]/10"
+      : "bg-zinc-100 text-zinc-500 border-zinc-200";
 
   return (
     <span
@@ -1166,9 +1164,9 @@ function CountBadge({
   count: number;
 }) {
   return (
-    <span className="border border-slate-200 bg-white rounded-xl px-3 py-2 text-xs text-slate-500">
+    <span className="border border-slate-200 bg-white rounded-xl px-3 py-2 text-xs text-zinc-500">
       {label}:{" "}
-      <strong className="text-slate-200">
+      <strong className="text-zinc-950">
         {count}
       </strong>
     </span>
@@ -1195,8 +1193,8 @@ function SidebarItem({
       }
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${
         active
-          ? "bg-blue-600/10 text-blue-600"
-          : "text-slate-500 hover:text-[#1D1D1F] hover:bg-white"
+          ? "bg-white text-[#5753C9] shadow-[0_1px_3px_rgba(0,0,0,0.05)]"
+          : "text-zinc-500 hover:text-zinc-950 hover:bg-white/60"
       }`}
     >
       <span className="[&>svg]:w-[18px] [&>svg]:h-[18px]">

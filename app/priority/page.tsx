@@ -3,19 +3,17 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
-import {
-  useRouter,
-} from "next/navigation";
-
-import {
-  createClient,
-} from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import ThozhanLogo from "@/components/thozhan/ThozhanLogo";
 
 import {
   AlertCircle,
+  ArrowRight,
   CalendarDays,
   CheckCircle2,
   CheckSquare,
@@ -32,18 +30,9 @@ import {
   User,
 } from "lucide-react";
 
-
-type PriorityLevel =
-  | "high"
-  | "normal"
-  | "low";
-
-
-type ReplyStatus =
-  | "yes"
-  | "no"
-  | "unclear";
-
+type PriorityLevel = "high" | "normal" | "low";
+type ReplyStatus = "yes" | "no" | "unclear";
+type PageStatus = "loading" | "loaded" | "error";
 
 type MeetingInfo = {
   title: string;
@@ -52,7 +41,6 @@ type MeetingInfo = {
   location: string | null;
   action: string;
 };
-
 
 type PriorityEmail = {
   id: string;
@@ -70,33 +58,37 @@ type PriorityEmail = {
   reason: string;
 };
 
-
 type PriorityResponse = {
   success: boolean;
   count: number;
   emails: PriorityEmail[];
 };
 
+type SyncResult = {
+  success?: boolean;
+  checked?: number;
+  new_emails?: number;
+  processed?: number;
+  tasks_added?: number;
+  remaining_new?: number;
+  message?: string;
+};
 
-type PageStatus =
-  | "loading"
-  | "loaded"
-  | "error";
-
+type FilterType =
+  | "all"
+  | "high"
+  | "normal"
+  | "low"
+  | "reply";
 
 export default function PriorityPage() {
   const router = useRouter();
 
-  const [name, setName] =
-    useState("");
-
-  const [email, setEmail] =
-    useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
 
   const [status, setStatus] =
-    useState<PageStatus>(
-      "loading"
-    );
+    useState<PageStatus>("loading");
 
   const [priorityEmails, setPriorityEmails] =
     useState<PriorityEmail[]>([]);
@@ -104,57 +96,134 @@ export default function PriorityPage() {
   const [errorMessage, setErrorMessage] =
     useState("");
 
+  const [filter, setFilter] =
+    useState<FilterType>("all");
+
+  const [isSyncing, setIsSyncing] =
+    useState(false);
+
+  const [syncMessage, setSyncMessage] =
+    useState("");
+
+  const [syncError, setSyncError] =
+    useState("");
+
+  const getAccessToken = useCallback(
+    async () => {
+      const supabase = createClient();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.replace("/");
+        return null;
+      }
+
+      return session.access_token;
+    },
+    [router]
+  );
 
   const loadPriority = useCallback(
-    async () => {
+    async (
+      accessToken?: string,
+      showLoading = true
+    ) => {
       try {
-        setStatus(
-          "loading"
-        );
+        if (showLoading) {
+          setStatus("loading");
+        }
 
         setErrorMessage("");
 
-        const supabase =
-          createClient();
+        const token =
+          accessToken ??
+          (await getAccessToken());
 
+        if (!token) {
+          return;
+        }
+
+        const response = await fetch(
+          "/api/priority",
+          {
+            method: "GET",
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.detail ??
+              "Unable to load priority emails."
+          );
+        }
+
+        const parsed =
+          data as PriorityResponse;
+
+        setPriorityEmails(
+          Array.isArray(parsed.emails)
+            ? parsed.emails
+            : []
+        );
+
+        setStatus("loaded");
+      } catch (error) {
+        console.error(
+          "Priority loading failed:",
+          error
+        );
+
+        setStatus("error");
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load priority emails."
+        );
+      }
+    },
+    [getAccessToken]
+  );
+
+  useEffect(() => {
+    async function initialisePage() {
+      const supabase = createClient();
+
+      try {
         const {
-          data: {
-            user,
-          },
+          data: { user },
           error: userError,
         } =
           await supabase.auth.getUser();
 
-
-        if (
-          userError ||
-          !user
-        ) {
+        if (userError || !user) {
           router.replace("/");
           return;
         }
 
-
-        setEmail(
-          user.email ?? ""
-        );
-
+        setEmail(user.email ?? "");
 
         setName(
           user.user_metadata?.name ||
-          user.email?.split("@")[0] ||
-          "there"
+            user.email?.split("@")[0] ||
+            "there"
         );
 
-
         const {
-          data: {
-            session,
-          },
+          data: { session },
           error: sessionError,
         } =
           await supabase.auth.getSession();
-
 
         if (
           sessionError ||
@@ -164,95 +233,39 @@ export default function PriorityPage() {
           return;
         }
 
-
-        const response =
-          await fetch(
-            "/api/priority",
-            {
-              method: "GET",
-
-              headers: {
-                Authorization:
-                  `Bearer ${session.access_token}`,
-              },
-
-              cache: "no-store",
-            }
-          );
-
-
-        const data =
-          await response.json();
-
-
-        if (!response.ok) {
-          throw new Error(
-            data.detail ??
-              "Unable to analyse your priority inbox."
-          );
-        }
-
-
-        const parsed =
-          data as PriorityResponse;
-
-
-        setPriorityEmails(
-          Array.isArray(
-            parsed.emails
-          )
-            ? parsed.emails
-            : []
+        await loadPriority(
+          session.access_token
         );
-
-
-        setStatus(
-          "loaded"
-        );
-
       } catch (error) {
         console.error(
-          "Priority inbox loading failed:",
+          "Priority page initialization failed:",
           error
         );
 
-
-        setStatus(
-          "error"
+        setStatus("error");
+        setErrorMessage(
+          "Unable to open your priority inbox."
         );
-
-
-        if (
-          error instanceof Error
-        ) {
-          setErrorMessage(
-            error.message
-          );
-        } else {
-          setErrorMessage(
-            "Unable to analyse your priority inbox."
-          );
-        }
       }
-    },
-    [router]
-  );
+    }
 
-
-  useEffect(() => {
-    void loadPriority();
-  }, [loadPriority]);
-
+    void initialisePage();
+  }, [loadPriority, router]);
 
   async function syncAndReload() {
-    try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    if (isSyncing) {
+      return;
+    }
 
-      if (!session) {
-        router.replace("/");
+    try {
+      setIsSyncing(true);
+      setSyncMessage("");
+      setSyncError("");
+
+      const token =
+        await getAccessToken();
+
+      if (!token) {
         return;
       }
 
@@ -261,30 +274,90 @@ export default function PriorityPage() {
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
+            Authorization:
+              `Bearer ${token}`,
           },
-          body: JSON.stringify({ limit: 20 }),
+          body: JSON.stringify({
+            limit: 20,
+          }),
+          cache: "no-store",
         }
       );
 
-      const data = await response.json();
+      const data =
+        (await response.json()) as
+          SyncResult & {
+            detail?: string;
+          };
 
       if (!response.ok) {
-        throw new Error(data.detail ?? "Unable to sync inbox.");
+        throw new Error(
+          data.detail ??
+            "Unable to sync your inbox."
+        );
       }
 
-      await loadPriority();
+      await loadPriority(
+        token,
+        false
+      );
+
+      const processed =
+        Number(data.processed ?? 0);
+
+      const tasksAdded =
+        Number(data.tasks_added ?? 0);
+
+      const remaining =
+        Number(data.remaining_new ?? 0);
+
+      if (processed > 0) {
+        let message =
+          `${processed} new email${
+            processed === 1 ? "" : "s"
+          } analysed`;
+
+        if (tasksAdded > 0) {
+          message +=
+            ` · ${tasksAdded} task${
+              tasksAdded === 1
+                ? ""
+                : "s"
+            } added`;
+        }
+
+        if (remaining > 0) {
+          message +=
+            ` · ${remaining} still waiting`;
+        }
+
+        setSyncMessage(message);
+      } else {
+        setSyncMessage(
+          data.message ||
+            "Inbox is already up to date."
+        );
+      }
     } catch (error) {
-      console.error("Inbox sync failed:", error);
-      setErrorMessage(error instanceof Error ? error.message : "Unable to sync inbox.");
+      console.error(
+        "Priority sync failed:",
+        error
+      );
+
+      setSyncError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sync your inbox."
+      );
+    } finally {
+      setIsSyncing(false);
     }
   }
 
-
   async function handleLogout() {
-    const supabase =
-      createClient();
+    const supabase = createClient();
 
     await supabase.auth.signOut();
 
@@ -292,92 +365,106 @@ export default function PriorityPage() {
     router.refresh();
   }
 
+  const highCount = useMemo(
+    () =>
+      priorityEmails.filter(
+        (item) =>
+          item.priority === "high"
+      ).length,
+    [priorityEmails]
+  );
 
-  function formatEmailDate(
-    value: string
-  ) {
-    if (!value) {
-      return "";
-    }
+  const normalCount = useMemo(
+    () =>
+      priorityEmails.filter(
+        (item) =>
+          item.priority === "normal"
+      ).length,
+    [priorityEmails]
+  );
 
-    const parsed =
-      new Date(value);
+  const lowCount = useMemo(
+    () =>
+      priorityEmails.filter(
+        (item) =>
+          item.priority === "low"
+      ).length,
+    [priorityEmails]
+  );
 
-    if (
-      Number.isNaN(
-        parsed.getTime()
-      )
-    ) {
-      return value;
-    }
+  const replyCount = useMemo(
+    () =>
+      priorityEmails.filter(
+        (item) =>
+          item.reply_needed ||
+          item.reply_status === "yes"
+      ).length,
+    [priorityEmails]
+  );
 
-    return parsed.toLocaleString(
-      undefined,
-      {
-        dateStyle: "medium",
-        timeStyle: "short",
+  const filteredEmails =
+    useMemo(() => {
+      if (filter === "all") {
+        return priorityEmails;
       }
+
+      if (filter === "reply") {
+        return priorityEmails.filter(
+          (item) =>
+            item.reply_needed ||
+            item.reply_status === "yes"
+        );
+      }
+
+      return priorityEmails.filter(
+        (item) =>
+          item.priority === filter
+      );
+    }, [filter, priorityEmails]);
+
+  if (
+    status === "loading" &&
+    priorityEmails.length === 0
+  ) {
+    return (
+      <main className="min-h-screen bg-[#f7f7f5] flex items-center justify-center text-[#18181b]">
+        <div className="flex items-center gap-3 text-sm text-zinc-500">
+          <Loader2
+            size={20}
+            className="animate-spin text-[#5b5bd6]"
+          />
+          Opening your priority inbox...
+        </div>
+      </main>
     );
   }
 
-
-  const highEmails =
-    priorityEmails.filter(
-      (item) =>
-        item.priority === "high"
-    );
-
-  const normalEmails =
-    priorityEmails.filter(
-      (item) =>
-        item.priority === "normal"
-    );
-
-  const lowEmails =
-    priorityEmails.filter(
-      (item) =>
-        item.priority === "low"
-    );
-
-
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex">
-
-      <aside className="hidden md:flex w-64 border-r border-slate-800/80 bg-slate-950 flex-col p-5">
-
+    <main className="min-h-screen bg-[#f7f7f5] text-[#18181b] md:flex">
+      <aside className="hidden md:flex fixed inset-y-0 left-0 z-30 w-[224px] flex-col border-r border-black/[0.06] bg-[#f1f0ed] px-4 py-5">
         <button
           type="button"
           onClick={() =>
-            router.push(
-              "/dashboard"
-            )
+            router.push("/dashboard")
           }
-          className="flex items-center gap-3 mb-10 text-left"
+          className="flex items-center gap-3 rounded-2xl px-2 py-2 text-left"
         >
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-            <Mail
-              size={20}
-            />
-          </div>
+          <ThozhanLogo />
 
-          <div>
-            <h1 className="font-semibold">
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold tracking-[-0.02em]">
               Thozhan
-            </h1>
+            </p>
 
-            <p className="text-xs text-slate-500">
-              AI Companion
+            <p className="mt-0.5 text-[9px] font-medium uppercase tracking-[0.17em] text-zinc-400">
+              Always with you
             </p>
           </div>
         </button>
 
-
-        <nav className="space-y-1 flex-1">
-
+        <nav className="mt-9 space-y-1">
           <SidebarItem
-            icon={
-              <Inbox />
-            }
+            icon={<Inbox />}
             label="Inbox"
             onClick={() =>
               router.push(
@@ -387,22 +474,16 @@ export default function PriorityPage() {
           />
 
           <SidebarItem
-            icon={
-              <Star />
-            }
+            icon={<Star />}
             label="Priority"
             active
           />
 
           <SidebarItem
-            icon={
-              <CheckSquare />
-            }
+            icon={<CheckSquare />}
             label="Tasks"
             onClick={() =>
-              router.push(
-                "/tasks"
-              )
+              router.push("/tasks")
             }
           />
 
@@ -418,14 +499,10 @@ export default function PriorityPage() {
             }
           />
 
-
-          <div className="border-t border-slate-800 my-5" />
-
+          <div className="my-5 h-px bg-black/[0.06]" />
 
           <SidebarItem
-            icon={
-              <Sparkles />
-            }
+            icon={<Sparkles />}
             label="AI Assistant"
             onClick={() =>
               router.push(
@@ -435,497 +512,578 @@ export default function PriorityPage() {
           />
 
           <SidebarItem
-            icon={
-              <Settings />
+            icon={<Settings />}
+            label="Settings"
+            onClick={() =>
+              router.push(
+                "/settings"
+              )
             }
-            label="Settings" onClick={() => router.push("/settings")} />
-
+          />
         </nav>
 
+        <div className="mt-auto">
+          <div className="mb-3 rounded-2xl border border-black/[0.06] bg-white/60 p-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ecebff] text-[#5b5bd6]">
+                <User size={15} />
+              </div>
 
-        <div className="border-t border-slate-800 pt-5">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-zinc-800">
+                  {name}
+                </p>
 
-          <div className="flex items-center gap-3 mb-4">
-
-            <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center">
-              <User
-                size={17}
-              />
+                <p className="mt-0.5 truncate text-[10px] text-zinc-400">
+                  {email}
+                </p>
+              </div>
             </div>
-
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">
-                {name}
-              </p>
-
-              <p className="text-xs text-slate-500 truncate">
-                {email}
-              </p>
-            </div>
-
           </div>
-
 
           <button
             type="button"
-            onClick={
-              handleLogout
-            }
-            className="w-full flex items-center gap-3 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg p-2.5 transition text-sm"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium text-zinc-500 transition hover:bg-black/[0.04] hover:text-zinc-900"
           >
-            <LogOut
-              size={17}
-            />
-
+            <LogOut size={16} />
             Sign out
           </button>
-
         </div>
-
       </aside>
 
+      <section className="min-w-0 flex-1 md:ml-[224px]">
+        <MobileHeader
+          onHome={() =>
+            router.push(
+              "/dashboard"
+            )
+          }
+        />
 
-      <section className="flex-1 min-w-0">
+        <div className="mx-auto max-w-[1280px] px-5 pb-16 pt-6 sm:px-7 md:px-9 lg:px-12 lg:pt-10">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#5b5bd6]/10 bg-[#efefff] px-3 py-1.5 text-[11px] font-medium text-[#5b5bd6]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#5b5bd6]" />
+                Thozhan intelligence
+              </div>
 
-        <header className="min-h-20 border-b border-slate-800/80 flex items-center justify-between gap-4 px-6 lg:px-10 py-4">
+              <h1 className="max-w-2xl text-[34px] font-semibold tracking-[-0.045em] text-zinc-950 sm:text-[40px]">
+                What needs your attention.
+              </h1>
 
-          <div>
-            <p className="text-sm text-slate-500">
-              Thozhan Intelligence
-            </p>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">
+                Thozhan sorts your inbox by
+                importance, highlights actions
+                and keeps reply requests from
+                getting lost.
+              </p>
+            </div>
 
-            <h1 className="font-semibold">
-              Priority Inbox
-            </h1>
+            <button
+              type="button"
+              onClick={() =>
+                void syncAndReload()
+              }
+              disabled={isSyncing}
+              className="inline-flex h-11 w-fit items-center gap-2 rounded-xl bg-zinc-950 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSyncing ? (
+                <Loader2
+                  size={16}
+                  className="animate-spin"
+                />
+              ) : (
+                <RefreshCw
+                  size={16}
+                />
+              )}
+
+              {isSyncing
+                ? "Analysing inbox..."
+                : "Sync inbox"}
+            </button>
           </div>
 
+          {(syncMessage ||
+            syncError) && (
+            <div
+              className={`mt-5 flex max-w-2xl items-start gap-2.5 rounded-xl border px-4 py-3 text-xs ${
+                syncError
+                  ? "border-red-200 bg-red-50 text-red-700"
+                  : "border-[#5b5bd6]/10 bg-[#efefff] text-[#5050b8]"
+              }`}
+            >
+              {syncError ? (
+                <AlertCircle
+                  size={15}
+                  className="mt-0.5 shrink-0"
+                />
+              ) : (
+                <CheckCircle2
+                  size={15}
+                  className="mt-0.5 shrink-0"
+                />
+              )}
 
-          <button
-            type="button"
-            onClick={() =>
-              void syncAndReload()
-            }
-            disabled={
-              status === "loading"
-            }
-            className="inline-flex items-center gap-2 border border-slate-800 hover:border-blue-500 bg-slate-900/50 rounded-xl px-4 py-2.5 text-sm text-slate-300 hover:text-white transition disabled:opacity-50"
-          >
-            <RefreshCw
-              size={15}
-              className={
-                status === "loading"
-                  ? "animate-spin"
-                  : ""
+              <span>
+                {syncError ||
+                  syncMessage}
+              </span>
+            </div>
+          )}
+
+          <section className="mt-9 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="High priority"
+              value={highCount}
+              caption="Needs attention"
+              icon={<Star />}
+              accent="high"
+              onClick={() =>
+                setFilter("high")
+              }
+              active={
+                filter === "high"
               }
             />
 
-            Refresh analysis
-          </button>
+            <StatCard
+              label="Needs reply"
+              value={replyCount}
+              caption="Waiting on you"
+              icon={
+                <MessageSquareReply />
+              }
+              accent="purple"
+              onClick={() =>
+                setFilter("reply")
+              }
+              active={
+                filter === "reply"
+              }
+            />
 
-        </header>
+            <StatCard
+              label="Normal"
+              value={normalCount}
+              caption="Worth reviewing"
+              icon={<Inbox />}
+              accent="neutral"
+              onClick={() =>
+                setFilter("normal")
+              }
+              active={
+                filter === "normal"
+              }
+            />
 
+            <StatCard
+              label="Low priority"
+              value={lowCount}
+              caption="Can wait"
+              icon={
+                <CheckCircle2 />
+              }
+              accent="neutral"
+              onClick={() =>
+                setFilter("low")
+              }
+              active={
+                filter === "low"
+              }
+            />
+          </section>
 
-        <div className="p-6 lg:p-10 max-w-7xl mx-auto">
+          <section className="mt-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  Priority inbox
+                </p>
 
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+                <h2 className="mt-1 text-xl font-semibold tracking-[-0.025em] text-zinc-900">
+                  {filter === "all"
+                    ? "Everything Thozhan analysed"
+                    : filter ===
+                        "reply"
+                      ? "Emails needing a reply"
+                      : `${
+                          filter
+                            .charAt(0)
+                            .toUpperCase() +
+                          filter.slice(
+                            1
+                          )
+                        } priority`}
+                </h2>
+              </div>
 
-            <div>
-              <p className="text-blue-400 text-sm font-medium">
-                AI PRIORITY ANALYSIS
-              </p>
+              <div className="flex flex-wrap gap-1.5 rounded-xl border border-black/[0.06] bg-white p-1">
+                <FilterButton
+                  label="All"
+                  active={
+                    filter === "all"
+                  }
+                  onClick={() =>
+                    setFilter("all")
+                  }
+                />
 
-              <h2 className="text-3xl lg:text-4xl font-semibold mt-2 tracking-tight">
-                What needs your attention
-              </h2>
+                <FilterButton
+                  label="High"
+                  active={
+                    filter === "high"
+                  }
+                  onClick={() =>
+                    setFilter("high")
+                  }
+                />
 
-              <p className="text-slate-400 mt-2 max-w-2xl">
-                Thozhan analyses your latest Gmail messages
-                for actions, deadlines, replies and meetings.
-              </p>
+                <FilterButton
+                  label="Normal"
+                  active={
+                    filter ===
+                    "normal"
+                  }
+                  onClick={() =>
+                    setFilter(
+                      "normal"
+                    )
+                  }
+                />
+
+                <FilterButton
+                  label="Low"
+                  active={
+                    filter === "low"
+                  }
+                  onClick={() =>
+                    setFilter("low")
+                  }
+                />
+
+                <FilterButton
+                  label="Reply"
+                  active={
+                    filter ===
+                    "reply"
+                  }
+                  onClick={() =>
+                    setFilter("reply")
+                  }
+                />
+              </div>
             </div>
 
+            {status === "error" && (
+              <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-7">
+                <div className="flex items-start gap-3">
+                  <AlertCircle
+                    size={20}
+                    className="mt-0.5 shrink-0 text-red-500"
+                  />
 
-            {status === "loaded" && (
-              <div className="flex flex-wrap gap-2">
+                  <div>
+                    <h3 className="font-medium text-red-900">
+                      Unable to load
+                      priority inbox
+                    </h3>
 
-                <CountBadge
-                  label="High"
-                  count={
-                    highEmails.length
-                  }
-                  kind="high"
-                />
+                    <p className="mt-1 text-sm leading-6 text-red-700">
+                      {errorMessage}
+                    </p>
 
-                <CountBadge
-                  label="Normal"
-                  count={
-                    normalEmails.length
-                  }
-                  kind="normal"
-                />
-
-                <CountBadge
-                  label="Low"
-                  count={
-                    lowEmails.length
-                  }
-                  kind="low"
-                />
-
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void loadPriority()
+                      }
+                      className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-red-700 shadow-sm ring-1 ring-red-200 transition hover:bg-red-50"
+                    >
+                      <RefreshCw
+                        size={14}
+                      />
+                      Try again
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
-          </div>
+            {status === "loaded" &&
+              filteredEmails.length ===
+                0 && (
+                <div className="mt-5 flex min-h-[260px] items-center justify-center rounded-[24px] border border-black/[0.06] bg-white px-6 py-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                  <div className="max-w-sm">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#efefff] text-[#5b5bd6]">
+                      <Star
+                        size={21}
+                      />
+                    </div>
 
+                    <h3 className="mt-4 font-semibold text-zinc-900">
+                      Nothing here
+                    </h3>
 
-          {status === "loading" && (
-            <div className="mt-10 border border-slate-800 bg-slate-900/30 rounded-2xl min-h-72 flex items-center justify-center">
+                    <p className="mt-2 text-sm leading-6 text-zinc-500">
+                      {filter ===
+                      "all"
+                        ? "Thozhan has not analysed any emails yet. Sync your inbox to get started."
+                        : "No emails match this filter right now."}
+                    </p>
 
-              <div className="text-center">
+                    {filter !==
+                      "all" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFilter(
+                            "all"
+                          )
+                        }
+                        className="mt-4 text-sm font-medium text-[#5b5bd6]"
+                      >
+                        Show all emails
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
-                <Loader2
-                  size={26}
-                  className="animate-spin text-blue-400 mx-auto"
-                />
-
-                <p className="text-slate-300 mt-4">
-                  Thozhan is analysing your latest emails...
-                </p>
-
-                <p className="text-xs text-slate-600 mt-2">
-                  Reading Gmail through your MCP tools.
-                </p>
-
-              </div>
-
-            </div>
-          )}
-
-
-          {status === "error" && (
-            <div className="mt-10 border border-red-500/20 bg-red-500/[0.04] rounded-2xl p-8">
-
-              <div className="max-w-xl">
-
-                <AlertCircle
-                  size={30}
-                  className="text-red-400"
-                />
-
-                <h3 className="text-lg font-medium mt-4">
-                  Priority analysis unavailable
-                </h3>
-
-                <p className="text-sm text-slate-500 mt-2">
-                  {errorMessage}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    void loadPriority()
-                  }
-                  className="mt-5 inline-flex items-center gap-2 border border-slate-700 hover:border-blue-500 rounded-xl px-4 py-2.5 text-sm transition"
-                >
-                  <RefreshCw
-                    size={15}
-                  />
-
-                  Try again
-                </button>
-
-              </div>
-
-            </div>
-          )}
-
-
-          {status === "loaded" &&
-            priorityEmails.length === 0 && (
-
-            <div className="mt-10 border border-slate-800 bg-slate-900/30 rounded-2xl min-h-64 flex items-center justify-center p-8">
-
-              <div className="text-center">
-
-                <CheckCircle2
-                  size={30}
-                  className="text-green-400 mx-auto"
-                />
-
-                <h3 className="font-medium mt-4">
-                  Nothing to analyse
-                </h3>
-
-                <p className="text-sm text-slate-500 mt-2">
-                  Thozhan did not receive any recent
-                  Gmail messages to classify.
-                </p>
-
-              </div>
-
-            </div>
-          )}
-
-
-          {status === "loaded" &&
-            priorityEmails.length > 0 && (
-
-            <div className="mt-10 space-y-10">
-
-              <PrioritySection
-                title="High priority"
-                description="Messages with clear evidence of time-sensitive or important action."
-                emails={
-                  highEmails
-                }
-                kind="high"
-                formatEmailDate={
-                  formatEmailDate
-                }
-              />
-
-              <PrioritySection
-                title="Normal priority"
-                description="Useful messages that matter but are not clearly urgent."
-                emails={
-                  normalEmails
-                }
-                kind="normal"
-                formatEmailDate={
-                  formatEmailDate
-                }
-              />
-
-              <PrioritySection
-                title="Low priority"
-                description="Informational, promotional or low-action messages."
-                emails={
-                  lowEmails
-                }
-                kind="low"
-                formatEmailDate={
-                  formatEmailDate
-                }
-              />
-
-            </div>
-          )}
-
+            {status === "loaded" &&
+              filteredEmails.length >
+                0 && (
+                <div className="mt-5 space-y-3">
+                  {filteredEmails.map(
+                    (item) => (
+                      <PriorityCard
+                        key={item.id}
+                        item={item}
+                      />
+                    )
+                  )}
+                </div>
+              )}
+          </section>
         </div>
-
       </section>
-
     </main>
   );
 }
 
-
-function PrioritySection({
-  title,
-  description,
-  emails,
-  kind,
-  formatEmailDate,
+function PriorityCard({
+  item,
 }: {
-  title: string;
-  description: string;
-  emails: PriorityEmail[];
-  kind: PriorityLevel;
-  formatEmailDate: (
-    value: string
-  ) => string;
+  item: PriorityEmail;
 }) {
-  if (
-    emails.length === 0
-  ) {
-    return null;
-  }
-
+  const priority =
+    getPriorityAppearance(
+      item.priority
+    );
 
   return (
-    <section>
+    <article className="group overflow-hidden rounded-[22px] border border-black/[0.065] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.025)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_12px_35px_rgba(24,24,27,0.06)]">
+      <div className="flex">
+        <div
+          className={`w-[3px] shrink-0 ${priority.bar}`}
+        />
 
-      <div className="flex items-end justify-between gap-4 mb-4">
+        <div className="min-w-0 flex-1 p-5 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.09em] ${priority.badge}`}
+                >
+                  {item.priority}
+                </span>
 
-        <div>
-          <div className="flex items-center gap-2">
+                {(item.reply_needed ||
+                  item.reply_status ===
+                    "yes") && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#efefff] px-2.5 py-1 text-[10px] font-medium text-[#5b5bd6]">
+                    <MessageSquareReply
+                      size={11}
+                    />
+                    Reply
+                  </span>
+                )}
 
-            <PriorityDot
-              kind={
-                kind
-              }
-            />
+                {item.meeting && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-[10px] font-medium text-zinc-600">
+                    <CalendarDays
+                      size={11}
+                    />
+                    Meeting
+                  </span>
+                )}
+              </div>
 
-            <h3 className="text-xl font-semibold">
-              {title}
-            </h3>
+              <h3 className="mt-3 text-[17px] font-semibold leading-6 tracking-[-0.02em] text-zinc-950">
+                {item.subject ||
+                  "(No subject)"}
+              </h3>
 
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400">
+                <span className="font-medium text-zinc-600">
+                  {item.sender ||
+                    item.sender_email ||
+                    "Unknown sender"}
+                </span>
+
+                {item.sender &&
+                  item.sender_email && (
+                    <>
+                      <span>·</span>
+                      <span>
+                        {
+                          item.sender_email
+                        }
+                      </span>
+                    </>
+                  )}
+
+                {item.date && (
+                  <>
+                    <span>·</span>
+                    <span>
+                      {formatDate(
+                        item.date
+                      )}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="shrink-0">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-xl ${priority.icon}`}
+              >
+                <Star
+                  size={16}
+                />
+              </div>
+            </div>
           </div>
 
-          <p className="text-sm text-slate-500 mt-1">
-            {description}
-          </p>
-        </div>
-
-
-        <span className="text-xs text-slate-600">
-          {emails.length}{" "}
-          {emails.length === 1
-            ? "message"
-            : "messages"}
-        </span>
-
-      </div>
-
-
-      <div className="grid xl:grid-cols-2 gap-5">
-
-        {emails.map(
-          (message) => (
-
-          <PriorityCard
-            key={
-              message.id
-            }
-            message={
-              message
-            }
-            formatEmailDate={
-              formatEmailDate
-            }
-          />
-
-        ))}
-
-      </div>
-
-    </section>
-  );
-}
-
-
-function PriorityCard({
-  message,
-  formatEmailDate,
-}: {
-  message: PriorityEmail;
-  formatEmailDate: (
-    value: string
-  ) => string;
-}) {
-  return (
-    <article className="border border-slate-800 bg-slate-900/35 rounded-2xl p-5 hover:border-slate-700 transition">
-
-      <div className="flex items-start justify-between gap-4">
-
-        <div className="min-w-0">
-
-          <PriorityBadge
-            priority={
-              message.priority
-            }
-          />
-
-          <h4 className="font-semibold text-slate-100 mt-3">
-            {message.subject}
-          </h4>
-
-          <p className="text-sm text-slate-500 mt-1 truncate">
-            {message.sender ||
-              message.sender_email ||
-              "Unknown sender"}
-          </p>
-
-        </div>
-
-
-        <p className="text-xs text-slate-600 shrink-0">
-          {formatEmailDate(
-            message.date
+          {item.summary && (
+            <p className="mt-5 max-w-4xl text-sm leading-6 text-zinc-600">
+              {item.summary}
+            </p>
           )}
-        </p>
 
-      </div>
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {item.action &&
+              item.action.toLowerCase() !==
+                "no action required" && (
+                <InfoBox
+                  icon={
+                    <CheckSquare />
+                  }
+                  label="Your action"
+                  value={item.action}
+                />
+              )}
 
+            {item.deadline && (
+              <InfoBox
+                icon={<Clock3 />}
+                label="Deadline"
+                value={formatDate(
+                  item.deadline
+                )}
+              />
+            )}
+          </div>
 
-      <p className="text-sm text-slate-300 leading-6 mt-5">
-        {message.summary}
-      </p>
+          {item.meeting && (
+            <div className="mt-3 rounded-2xl bg-[#f8f8f7] p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-[#5b5bd6] shadow-sm">
+                  <CalendarDays
+                    size={15}
+                  />
+                </div>
 
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+                    Meeting detected
+                  </p>
 
-      <div className="mt-5 grid sm:grid-cols-2 gap-3">
+                  <p className="mt-1 text-sm font-medium text-zinc-800">
+                    {item.meeting
+                      .title ||
+                      item.subject}
+                  </p>
 
-        <InfoBox
-          icon={
-            <CheckSquare />
-          }
-          label="Action"
-          value={
-            message.action ||
-            "None clearly stated"
-          }
-        />
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
+                    {item.meeting
+                      .date && (
+                      <span>
+                        {
+                          item
+                            .meeting
+                            .date
+                        }
+                      </span>
+                    )}
 
-        <InfoBox
-          icon={
-            <Clock3 />
-          }
-          label="Deadline"
-          value={
-            message.deadline ||
-            "None stated"
-          }
-        />
+                    {item.meeting
+                      .time && (
+                      <span>
+                        {
+                          item
+                            .meeting
+                            .time
+                        }
+                      </span>
+                    )}
 
-        <InfoBox
-          icon={
-            <MessageSquareReply />
-          }
-          label="Reply"
-          value={
-            message.reply_status === "yes"
-              ? "Reply needed"
-              : message.reply_status === "no"
-              ? "No reply needed"
-              : "Unclear"
-          }
-        />
+                    {item.meeting
+                      .location && (
+                      <span>
+                        {
+                          item
+                            .meeting
+                            .location
+                        }
+                      </span>
+                    )}
+                  </div>
 
-        <InfoBox
-          icon={
-            <CalendarDays />
-          }
-          label="Meeting"
-          value={
-            message.meeting
-              ? formatMeeting(
-                  message.meeting
-                )
-              : "No meeting identified"
-          }
-        />
+                  {item.meeting
+                    .action && (
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">
+                      {
+                        item.meeting
+                          .action
+                      }
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
-      </div>
-
-
-      {message.reason && (
-        <div className="mt-5 pt-4 border-t border-slate-800">
-
-          <p className="text-[11px] uppercase tracking-wider text-slate-600">
-            Why Thozhan classified it this way
-          </p>
-
-          <p className="text-xs text-slate-500 leading-5 mt-2">
-            {message.reason}
-          </p>
-
+          {item.reason && (
+            <div className="mt-5 border-t border-black/[0.055] pt-4">
+              <p className="text-xs leading-5 text-zinc-400">
+                <span className="font-medium text-zinc-500">
+                  Why Thozhan
+                  classified it:
+                </span>{" "}
+                {item.reason}
+              </p>
+            </div>
+          )}
         </div>
-      )}
-
+      </div>
     </article>
   );
 }
-
 
 function InfoBox({
   icon,
@@ -937,108 +1095,111 @@ function InfoBox({
   value: string;
 }) {
   return (
-    <div className="border border-slate-800/80 bg-slate-950/50 rounded-xl p-3">
-
-      <div className="flex items-center gap-2 text-slate-500">
-
-        <span className="[&>svg]:w-[14px] [&>svg]:h-[14px]">
+    <div className="rounded-2xl bg-[#f8f8f7] p-4">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-zinc-500 shadow-sm [&>svg]:h-[15px] [&>svg]:w-[15px]">
           {icon}
-        </span>
+        </div>
 
-        <span className="text-[11px] uppercase tracking-wide">
-          {label}
-        </span>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+            {label}
+          </p>
 
+          <p className="mt-1 text-sm leading-5 text-zinc-700">
+            {value}
+          </p>
+        </div>
       </div>
-
-      <p className="text-sm text-slate-300 mt-2 leading-5">
-        {value}
-      </p>
-
     </div>
   );
 }
 
-
-function PriorityBadge({
-  priority,
-}: {
-  priority: PriorityLevel;
-}) {
-  const styles =
-    priority === "high"
-      ? "bg-red-500/10 text-red-400 border-red-500/20"
-      : priority === "normal"
-      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-      : "bg-slate-800 text-slate-400 border-slate-700";
-
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 border rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${styles}`}
-    >
-      <PriorityDot
-        kind={
-          priority
-        }
-      />
-
-      {priority}
-    </span>
-  );
-}
-
-
-function PriorityDot({
-  kind,
-}: {
-  kind: PriorityLevel;
-}) {
-  const styles =
-    kind === "high"
-      ? "bg-red-400"
-      : kind === "normal"
-      ? "bg-amber-400"
-      : "bg-slate-500";
-
-
-  return (
-    <span
-      className={`w-2 h-2 rounded-full ${styles}`}
-    />
-  );
-}
-
-
-function CountBadge({
+function StatCard({
   label,
-  count,
-  kind,
+  value,
+  caption,
+  icon,
+  accent,
+  active,
+  onClick,
 }: {
   label: string;
-  count: number;
-  kind: PriorityLevel;
+  value: number;
+  caption: string;
+  icon: React.ReactNode;
+  accent:
+    | "high"
+    | "purple"
+    | "neutral";
+  active: boolean;
+  onClick: () => void;
 }) {
-  const styles =
-    kind === "high"
-      ? "border-red-500/20 bg-red-500/[0.05] text-red-400"
-      : kind === "normal"
-      ? "border-amber-500/20 bg-amber-500/[0.05] text-amber-400"
-      : "border-slate-700 bg-slate-900 text-slate-400";
-
+  const iconStyle =
+    accent === "high"
+      ? "bg-red-50 text-red-500"
+      : accent === "purple"
+        ? "bg-[#efefff] text-[#5b5bd6]"
+        : "bg-zinc-100 text-zinc-500";
 
   return (
-    <span
-      className={`border rounded-xl px-3 py-2 text-xs ${styles}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-[20px] border bg-white p-5 text-left transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_10px_30px_rgba(24,24,27,0.05)] ${
+        active
+          ? "border-[#5b5bd6]/30 ring-2 ring-[#5b5bd6]/5"
+          : "border-black/[0.06]"
+      }`}
     >
-      {label}:{" "}
-      <strong>
-        {count}
-      </strong>
-    </span>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium text-zinc-500">
+            {label}
+          </p>
+
+          <p className="mt-3 text-[30px] font-semibold tracking-[-0.04em] text-zinc-950">
+            {value}
+          </p>
+        </div>
+
+        <div
+          className={`flex h-9 w-9 items-center justify-center rounded-xl [&>svg]:h-[16px] [&>svg]:w-[16px] ${iconStyle}`}
+        >
+          {icon}
+        </div>
+      </div>
+
+      <p className="mt-1 text-[11px] text-zinc-400">
+        {caption}
+      </p>
+    </button>
   );
 }
 
+function FilterButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+        active
+          ? "bg-zinc-950 text-white"
+          : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
 function SidebarItem({
   icon,
@@ -1054,16 +1215,20 @@ function SidebarItem({
   return (
     <button
       type="button"
-      onClick={
-        onClick
-      }
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition ${
         active
-          ? "bg-blue-600/10 text-blue-400"
-          : "text-slate-400 hover:text-white hover:bg-slate-900"
+          ? "bg-white text-zinc-950 shadow-[0_1px_3px_rgba(0,0,0,0.05)]"
+          : "text-zinc-500 hover:bg-white/60 hover:text-zinc-900"
       }`}
     >
-      <span className="[&>svg]:w-[18px] [&>svg]:h-[18px]">
+      <span
+        className={`[&>svg]:h-[17px] [&>svg]:w-[17px] ${
+          active
+            ? "text-[#5b5bd6]"
+            : ""
+        }`}
+      >
         {icon}
       </span>
 
@@ -1072,29 +1237,98 @@ function SidebarItem({
   );
 }
 
+function MobileHeader({
+  onHome,
+}: {
+  onHome: () => void;
+}) {
+  return (
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-black/[0.06] bg-[#f7f7f5]/90 px-5 backdrop-blur-xl md:hidden">
+      <button
+        type="button"
+        onClick={onHome}
+        className="flex items-center gap-2.5"
+      >
+        <ThozhanLogo />
 
-function formatMeeting(
-  meeting: MeetingInfo
+        <div className="text-left">
+          <p className="text-sm font-semibold">
+            Thozhan
+          </p>
+
+          <p className="text-[9px] uppercase tracking-[0.14em] text-zinc-400">
+            Priority
+          </p>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        onClick={onHome}
+        className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/[0.06] bg-white text-zinc-600"
+        aria-label="Go to inbox"
+      >
+        <Mail size={16} />
+      </button>
+    </header>
+  );
+}
+
+function getPriorityAppearance(
+  priority: PriorityLevel
 ) {
-  const details = [
-    meeting.title,
-    meeting.date,
-    meeting.time,
-    meeting.location,
-  ].filter(Boolean);
-
-
-  if (
-    meeting.action
-  ) {
-    details.push(
-      meeting.action
-    );
+  if (priority === "high") {
+    return {
+      bar: "bg-red-400",
+      badge:
+        "bg-red-50 text-red-600",
+      icon:
+        "bg-red-50 text-red-500",
+    };
   }
 
+  if (priority === "normal") {
+    return {
+      bar: "bg-[#7777dd]",
+      badge:
+        "bg-[#efefff] text-[#5b5bd6]",
+      icon:
+        "bg-[#efefff] text-[#5b5bd6]",
+    };
+  }
 
-  return (
-    details.join(" • ") ||
-    "Meeting identified"
+  return {
+    bar: "bg-zinc-300",
+    badge:
+      "bg-zinc-100 text-zinc-500",
+    icon:
+      "bg-zinc-100 text-zinc-500",
+  };
+}
+
+function formatDate(
+  value: string
+) {
+  if (!value) {
+    return "";
+  }
+
+  const parsed =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      parsed.getTime()
+    )
+  ) {
+    return value;
+  }
+
+  return parsed.toLocaleString(
+    undefined,
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }
   );
 }
