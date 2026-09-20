@@ -149,14 +149,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex">
-      <aside className="hidden md:flex w-64 border-r border-slate-800/80 bg-slate-950 flex-col p-5">
+    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex">
+      <aside className="hidden md:flex w-64 border-r border-slate-200/80 bg-[#F5F5F7] flex-col p-5">
         <button
           type="button"
           onClick={() => router.push("/dashboard")}
           className="flex items-center gap-3 mb-10 text-left"
         >
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+          <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/60">
             <Mail size={20} />
           </div>
           <div>
@@ -170,12 +170,12 @@ export default function SettingsPage() {
           <SidebarItem icon={<Star />} label="Priority" onClick={() => router.push("/priority")} />
           <SidebarItem icon={<CheckSquare />} label="Tasks" onClick={() => router.push("/tasks")} />
           <SidebarItem icon={<CalendarDays />} label="Meetings" onClick={() => router.push("/meetings")} />
-          <div className="border-t border-slate-800 my-5" />
+          <div className="border-t border-slate-200 my-5" />
           <SidebarItem icon={<Sparkles />} label="AI Assistant" onClick={() => router.push("/dashboard")} />
           <SidebarItem icon={<Settings />} label="Settings" active />
         </nav>
 
-        <div className="border-t border-slate-800 pt-5">
+        <div className="border-t border-slate-200 pt-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center">
               <User size={17} />
@@ -190,7 +190,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg p-2.5 transition text-sm"
+            className="w-full flex items-center gap-3 text-slate-500 hover:text-[#1D1D1F] hover:bg-white rounded-lg p-2.5 transition text-sm"
           >
             <LogOut size={17} />
             Sign out
@@ -199,7 +199,7 @@ export default function SettingsPage() {
       </aside>
 
       <section className="flex-1 min-w-0">
-        <header className="min-h-20 border-b border-slate-800/80 flex items-center justify-between gap-4 px-6 lg:px-10 py-4">
+        <header className="min-h-20 border-b border-slate-200/80 flex items-center justify-between gap-4 px-6 lg:px-10 py-4">
           <div>
             <p className="text-sm text-slate-500">Thozhan Preferences</p>
             <h1 className="font-semibold">Settings</h1>
@@ -208,7 +208,7 @@ export default function SettingsPage() {
             type="button"
             onClick={saveSettings}
             disabled={loading || saving}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl px-4 py-2.5 text-sm font-medium transition"
+            className="inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 rounded-xl px-4 py-2.5 text-sm font-medium transition"
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? "Saving..." : "Save changes"}
@@ -218,14 +218,14 @@ export default function SettingsPage() {
         <div className="p-6 lg:p-10 max-w-5xl mx-auto">
           {loading ? (
             <div className="min-h-72 flex items-center justify-center">
-              <Loader2 className="animate-spin text-blue-400" size={28} />
+              <Loader2 className="animate-spin text-blue-600" size={28} />
             </div>
           ) : (
             <div className="space-y-8">
               <section>
-                <p className="text-blue-400 text-sm font-medium">PROFILE</p>
+                <p className="text-blue-600 text-sm font-medium">PROFILE</p>
                 <h2 className="text-3xl font-semibold mt-2">Your Thozhan profile</h2>
-                <p className="text-slate-400 mt-2">
+                <p className="text-slate-500 mt-2">
                   Control how your name appears and which timezone Thozhan uses for scheduling.
                 </p>
 
@@ -239,7 +239,7 @@ export default function SettingsPage() {
                           full_name: event.target.value,
                         }))
                       }
-                      className="w-full bg-slate-950 border border-slate-700 focus:border-blue-500 outline-none rounded-xl px-4 py-3 text-sm"
+                      className="w-full bg-[#F5F5F7] border border-slate-300 focus:border-blue-500 outline-none rounded-xl px-4 py-3 text-sm"
                       placeholder="Your name"
                     />
                   </Field>
@@ -248,7 +248,7 @@ export default function SettingsPage() {
                     <input
                       value={settings.email}
                       disabled
-                      className="w-full bg-slate-950/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-500"
+                      className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-500"
                     />
                   </Field>
 
@@ -261,7 +261,7 @@ export default function SettingsPage() {
                           time_zone: event.target.value,
                         }))
                       }
-                      className="w-full bg-slate-950 border border-slate-700 focus:border-blue-500 outline-none rounded-xl px-4 py-3 text-sm"
+                      className="w-full bg-[#F5F5F7] border border-slate-300 focus:border-blue-500 outline-none rounded-xl px-4 py-3 text-sm"
                     >
                       <option value="Pacific/Auckland">Auckland · Pacific/Auckland</option>
                       <option value="Australia/Sydney">Sydney · Australia/Sydney</option>
@@ -274,15 +274,15 @@ export default function SettingsPage() {
                 </div>
               </section>
 
-              <section className="border-t border-slate-800 pt-8">
+              <section className="border-t border-slate-200 pt-8">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <Bell size={19} />
                   </div>
                   <div>
-                    <p className="text-blue-400 text-sm font-medium">NOTIFICATIONS</p>
+                    <p className="text-blue-600 text-sm font-medium">NOTIFICATIONS</p>
                     <h2 className="text-2xl font-semibold mt-1">What should Thozhan alert you about?</h2>
-                    <p className="text-slate-400 mt-2">
+                    <p className="text-slate-500 mt-2">
                       These preferences are stored now and can drive in-app, email, or push delivery as those channels are added.
                     </p>
                   </div>
@@ -360,7 +360,7 @@ function ToggleCard({
     <button
       type="button"
       onClick={onClick}
-      className="text-left border border-slate-800 bg-slate-900/35 hover:border-slate-700 rounded-2xl p-5 transition"
+      className="text-left border border-slate-200 bg-white/80 hover:border-slate-300 rounded-2xl p-5 transition"
     >
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -400,8 +400,8 @@ function SidebarItem({
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${
         active
-          ? "bg-blue-600/10 text-blue-400"
-          : "text-slate-400 hover:text-white hover:bg-slate-900"
+          ? "bg-blue-600/10 text-blue-600"
+          : "text-slate-500 hover:text-[#1D1D1F] hover:bg-white"
       }`}
     >
       <span className="[&>svg]:w-[18px] [&>svg]:h-[18px]">{icon}</span>

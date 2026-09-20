@@ -818,13 +818,13 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex items-center justify-center">
 
-        <div className="flex items-center gap-3 text-slate-400">
+        <div className="flex items-center gap-3 text-slate-500">
 
           <Loader2
             size={22}
-            className="animate-spin text-blue-400"
+            className="animate-spin text-blue-600"
           />
 
           Loading Thozhan...
@@ -841,19 +841,19 @@ export default function DashboardPage() {
   // =====================================================
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex">
+    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex">
 
 
       {/* =========================================
           SIDEBAR
       ========================================= */}
 
-      <aside className="hidden md:flex w-64 border-r border-slate-800/80 bg-slate-950 flex-col p-5">
+      <aside className="hidden md:flex w-64 border-r border-slate-200/80 bg-[#F5F5F7] flex-col p-5">
 
 
         <div className="flex items-center gap-3 mb-10">
 
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+          <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/60">
 
             <Mail
               size={20}
@@ -924,7 +924,7 @@ export default function DashboardPage() {
           />
 
 
-          <div className="border-t border-slate-800 my-5" />
+          <div className="border-t border-slate-200 my-5" />
 
 
           <SidebarItem
@@ -951,7 +951,7 @@ export default function DashboardPage() {
         </nav>
 
 
-        <div className="border-t border-slate-800 pt-5">
+        <div className="border-t border-slate-200 pt-5">
 
 
           <div className="flex items-center gap-3 mb-4">
@@ -984,7 +984,7 @@ export default function DashboardPage() {
             onClick={
               handleLogout
             }
-            className="w-full flex items-center gap-3 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg p-2.5 transition text-sm"
+            className="w-full flex items-center gap-3 text-slate-500 hover:text-[#1D1D1F] hover:bg-white rounded-lg p-2.5 transition text-sm"
           >
 
             <LogOut
@@ -1009,12 +1009,12 @@ export default function DashboardPage() {
 
         {/* HEADER */}
 
-        <header className="h-20 border-b border-slate-800/80 flex items-center justify-between px-6 lg:px-10">
+        <header className="h-20 border-b border-slate-200/80 flex items-center justify-between px-6 lg:px-10">
 
 
           <div className="md:hidden flex items-center gap-2">
 
-            <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-9 h-9 bg-blue-600 text-white rounded-lg flex items-center justify-center">
 
               <Mail
                 size={18}
@@ -1042,7 +1042,7 @@ export default function DashboardPage() {
                 setSearchQuery(event.target.value)
               }
               placeholder="Search your inbox..."
-              className="w-full bg-slate-900/60 border border-slate-800 rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none placeholder:text-slate-600 focus:border-blue-500/60 transition"
+              className="w-full bg-white/60 border border-slate-200 rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none placeholder:text-slate-500 focus:border-blue-500/60 transition"
             />
 
           </div>
@@ -1058,12 +1058,12 @@ export default function DashboardPage() {
                 );
                 setShowProfileMenu(false);
               }}
-              className="relative w-10 h-10 border border-slate-800 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:border-slate-700 transition"
+              className="relative w-10 h-10 border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:text-[#1D1D1F] hover:border-slate-300 transition"
               aria-label="Notifications"
             >
               <Bell size={18} />
               {notificationItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-blue-600 text-[10px] text-white flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-blue-600 text-[10px] text-[#1D1D1F] flex items-center justify-center">
                   {notificationItems.length}
                 </span>
               )}
@@ -1077,14 +1077,14 @@ export default function DashboardPage() {
                 );
                 setShowNotifications(false);
               }}
-              className="w-9 h-9 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center hover:bg-blue-600/30 transition"
+              className="w-9 h-9 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center hover:bg-blue-600/30 transition"
               aria-label="Profile"
             >
               <User size={17} />
             </button>
 
             {showNotifications && (
-              <div className="absolute right-12 top-12 z-50 w-80 max-h-96 overflow-y-auto border border-slate-800 bg-slate-950 shadow-2xl rounded-2xl p-3">
+              <div className="absolute right-12 top-12 z-50 w-80 max-h-96 overflow-y-auto border border-slate-200 bg-[#F5F5F7] shadow-2xl rounded-2xl p-3">
                 <div className="flex items-center justify-between px-2 py-2">
                   <p className="font-medium">Notifications</p>
                   <span className="text-xs text-slate-500">
@@ -1108,7 +1108,7 @@ export default function DashboardPage() {
                           );
                           setShowNotifications(false);
                         }}
-                        className="w-full text-left rounded-xl p-3 hover:bg-slate-900 transition"
+                        className="w-full text-left rounded-xl p-3 hover:bg-white transition"
                       >
                         <p className="text-sm font-medium truncate">
                           {message.subject || "Email"}
@@ -1126,8 +1126,8 @@ export default function DashboardPage() {
             )}
 
             {showProfileMenu && (
-              <div className="absolute right-0 top-12 z-50 w-64 border border-slate-800 bg-slate-950 shadow-2xl rounded-2xl p-3">
-                <div className="px-3 py-3 border-b border-slate-800">
+              <div className="absolute right-0 top-12 z-50 w-64 border border-slate-200 bg-[#F5F5F7] shadow-2xl rounded-2xl p-3">
+                <div className="px-3 py-3 border-b border-slate-200">
                   <p className="text-sm font-medium truncate">
                     {name}
                   </p>
@@ -1139,7 +1139,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/settings")}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 mt-2 rounded-xl text-sm text-slate-300 hover:bg-slate-900 hover:text-white transition"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 mt-2 rounded-xl text-sm text-slate-700 hover:bg-white hover:text-[#1D1D1F] transition"
                 >
                   <Settings size={16} />
                   Settings
@@ -1148,7 +1148,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:bg-slate-900 hover:text-white transition"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 hover:bg-white hover:text-[#1D1D1F] transition"
                 >
                   <LogOut size={16} />
                   Sign out
@@ -1168,7 +1168,7 @@ export default function DashboardPage() {
 
           <div>
 
-            <p className="text-blue-400 text-sm font-medium">
+            <p className="text-blue-600 text-sm font-medium">
               AI EMAIL WORKSPACE
             </p>
 
@@ -1178,7 +1178,7 @@ export default function DashboardPage() {
             </h2>
 
 
-            <p className="text-slate-400 mt-2">
+            <p className="text-slate-500 mt-2">
 
               Thozhan can now securely connect
               your services and help manage
@@ -1193,6 +1193,15 @@ export default function DashboardPage() {
               CONNECTION CARDS
           ===================================== */}
 
+          {groqStatus === "connected" &&
+          gmailStatus === "connected" &&
+          calendarStatus === "connected" ? (
+            <div className="mt-7 inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700">
+              <span className="h-2 w-2 rounded-full bg-green-500" />
+              Thozhan ready
+            </div>
+          ) : (
+            <>
           <div className="grid lg:grid-cols-3 gap-5 mt-9">
 
 
@@ -1296,6 +1305,9 @@ export default function DashboardPage() {
 
           </div>
 
+            </>
+          )}
+
 
           {/* =====================================
               INBOX
@@ -1337,7 +1349,7 @@ export default function DashboardPage() {
                     inboxStatus ===
                     "loading"
                   }
-                  className="flex items-center gap-2 border border-slate-800 hover:border-slate-700 bg-slate-900/50 rounded-xl px-4 py-2.5 text-sm text-slate-300 hover:text-white transition disabled:opacity-50"
+                  className="flex items-center gap-2 border border-slate-200 hover:border-slate-300 bg-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-700 hover:text-[#1D1D1F] transition disabled:opacity-50"
                 >
 
                   <RefreshCw
@@ -1363,16 +1375,16 @@ export default function DashboardPage() {
             {gmailStatus ===
               "not_connected" && (
 
-              <div className="border border-slate-800 bg-slate-900/30 rounded-2xl min-h-72 flex items-center justify-center p-8">
+              <div className="border border-slate-200 bg-white/75 rounded-2xl min-h-72 flex items-center justify-center p-8">
 
 
                 <div className="text-center max-w-md">
 
-                  <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                  <div className="w-14 h-14 bg-blue-50 border border-blue-100 rounded-2xl flex items-center justify-center mx-auto">
 
                     <Inbox
                       size={24}
-                      className="text-blue-400"
+                      className="text-blue-600"
                     />
 
                   </div>
@@ -1401,7 +1413,7 @@ export default function DashboardPage() {
                         "/setup/gmail"
                       )
                     }
-                    className="mt-6 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-xl text-sm font-medium transition"
+                    className="mt-6 inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 px-5 py-2.5 rounded-xl text-sm font-medium transition"
                   >
 
                     Connect Gmail
@@ -1455,13 +1467,13 @@ export default function DashboardPage() {
               inboxStatus ===
                 "loading" && (
 
-              <div className="border border-slate-800 bg-slate-900/30 rounded-2xl min-h-72 flex items-center justify-center">
+              <div className="border border-slate-200 bg-white/75 rounded-2xl min-h-72 flex items-center justify-center">
 
-                <div className="flex items-center gap-3 text-slate-400">
+                <div className="flex items-center gap-3 text-slate-500">
 
                   <Loader2
                     size={20}
-                    className="animate-spin text-blue-400"
+                    className="animate-spin text-blue-600"
                   />
 
                   Reading your Gmail inbox...
@@ -1502,7 +1514,7 @@ export default function DashboardPage() {
                     onClick={() =>
                       loadInbox()
                     }
-                    className="mt-5 inline-flex items-center gap-2 border border-slate-700 hover:border-blue-500 rounded-xl px-4 py-2.5 text-sm transition"
+                    className="mt-5 inline-flex items-center gap-2 border border-slate-300 hover:border-blue-500 rounded-xl px-4 py-2.5 text-sm transition"
                   >
 
                     <RefreshCw
@@ -1528,7 +1540,7 @@ export default function DashboardPage() {
               emails.length ===
                 0 && (
 
-              <div className="border border-slate-800 bg-slate-900/30 rounded-2xl min-h-60 flex items-center justify-center p-8">
+              <div className="border border-slate-200 bg-white/75 rounded-2xl min-h-60 flex items-center justify-center p-8">
 
                 <div className="text-center">
 
@@ -1561,15 +1573,15 @@ export default function DashboardPage() {
               emails.length >
                 0 && (
 
-              <div className="border border-slate-800 bg-slate-900/20 rounded-2xl overflow-hidden">
+              <div className="border border-slate-200 bg-white/20 rounded-2xl overflow-hidden">
 
-                <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+                <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
 
                   <div className="flex items-center gap-2">
 
                     <Inbox
                       size={17}
-                      className="text-blue-400"
+                      className="text-blue-600"
                     />
 
                     <span className="text-sm font-medium">
@@ -1594,9 +1606,9 @@ export default function DashboardPage() {
                     <div className="p-8 text-center">
                       <Search
                         size={24}
-                        className="text-slate-600 mx-auto"
+                        className="text-slate-500 mx-auto"
                       />
-                      <p className="text-sm text-slate-400 mt-3">
+                      <p className="text-sm text-slate-500 mt-3">
                         No emails match “{searchQuery}”.
                       </p>
                     </div>
@@ -1609,7 +1621,7 @@ export default function DashboardPage() {
                       key={
                         message.id
                       }
-                      className="p-5 hover:bg-slate-900/60 transition"
+                      className="p-5 hover:bg-white/60 transition"
                     >
 
                       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
@@ -1619,7 +1631,7 @@ export default function DashboardPage() {
 
                           <div className="flex items-center gap-2">
 
-                            <div className="w-8 h-8 shrink-0 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                            <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
 
                               <Mail
                                 size={14}
@@ -1642,7 +1654,7 @@ export default function DashboardPage() {
                               {message.sender_name &&
                                 message.sender_email && (
 
-                                <p className="text-xs text-slate-600 truncate">
+                                <p className="text-xs text-slate-500 truncate">
                                   {message.sender_email}
                                 </p>
                               )}
@@ -1654,7 +1666,7 @@ export default function DashboardPage() {
                         </div>
 
 
-                        <p className="text-xs text-slate-600 shrink-0 lg:pt-1">
+                        <p className="text-xs text-slate-500 shrink-0 lg:pt-1">
                           {formatEmailDate(
                             message.date
                           )}
@@ -1696,9 +1708,9 @@ export default function DashboardPage() {
               "success" &&
               assistantResponse && (
 
-              <div className="mb-4 border border-blue-500/20 bg-blue-500/[0.04] rounded-2xl p-5">
+              <div className="mb-4 border border-blue-100 bg-blue-500/[0.04] rounded-2xl p-5">
 
-                <div className="flex items-center gap-2 text-blue-400">
+                <div className="flex items-center gap-2 text-blue-600">
 
                   <Sparkles
                     size={17}
@@ -1720,9 +1732,9 @@ export default function DashboardPage() {
                   .tools_used
                   .length > 0 && (
 
-                  <div className="mt-5 pt-4 border-t border-slate-800">
+                  <div className="mt-5 pt-4 border-t border-slate-200">
 
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-slate-500">
                       MCP tools used:{" "}
                       {assistantResponse
                         .tools_used
@@ -1766,25 +1778,25 @@ export default function DashboardPage() {
             )}
 
 
-            <div className="border border-slate-800 bg-slate-900/40 rounded-2xl p-4">
+            <div className="border border-slate-200 bg-white/40 rounded-2xl p-4">
 
               <div className="flex items-center gap-3">
 
-                <div className="w-10 h-10 shrink-0 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 shrink-0 bg-blue-50 rounded-xl flex items-center justify-center">
 
                   {assistantStatus ===
                     "loading" ? (
 
                     <Loader2
                       size={19}
-                      className="text-blue-400 animate-spin"
+                      className="text-blue-600 animate-spin"
                     />
 
                   ) : (
 
                     <Sparkles
                       size={19}
-                      className="text-blue-400"
+                      className="text-blue-600"
                     />
                   )}
 
@@ -1823,7 +1835,7 @@ export default function DashboardPage() {
                       ? "Thozhan is thinking..."
                       : "Ask Thozhan about your inbox..."
                   }
-                  className="flex-1 min-w-0 bg-transparent outline-none text-sm text-white placeholder:text-slate-600 disabled:cursor-not-allowed"
+                  className="flex-1 min-w-0 bg-transparent outline-none text-sm text-[#1D1D1F] placeholder:text-slate-500 disabled:cursor-not-allowed"
                 />
 
 
@@ -1841,7 +1853,7 @@ export default function DashboardPage() {
                     assistantStatus ===
                       "loading"
                   }
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 px-4 py-2 rounded-lg text-sm font-medium transition"
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 px-4 py-2 rounded-lg text-sm font-medium transition"
                 >
 
                   {assistantStatus ===
@@ -1875,7 +1887,7 @@ export default function DashboardPage() {
                 gmailStatus ===
                   "connected" && (
 
-                <p className="text-xs text-slate-600 mt-3 ml-[52px]">
+                <p className="text-xs text-slate-500 mt-3 ml-[52px]">
                   Press Enter to send. Thozhan can use your Gmail MCP tools when needed.
                 </p>
               )}
@@ -1914,8 +1926,8 @@ function SidebarItem({
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${
         active
-          ? "bg-blue-600/10 text-blue-400"
-          : "text-slate-400 hover:text-white hover:bg-slate-900"
+          ? "bg-blue-600/10 text-blue-600"
+          : "text-slate-500 hover:text-[#1D1D1F] hover:bg-white"
       }`}
     >
 
@@ -1968,7 +1980,7 @@ function ConnectionCard({
       className={`border rounded-2xl p-6 transition ${
         isConnected
           ? "border-green-500/20 bg-green-500/[0.03]"
-          : "border-slate-800 bg-slate-900/40 hover:border-slate-700"
+          : "border-slate-200 bg-white/40 hover:border-slate-300"
       }`}
     >
 
@@ -1980,14 +1992,14 @@ function ConnectionCard({
           className={`w-11 h-11 rounded-xl flex items-center justify-center [&>svg]:w-5 ${
             isConnected
               ? "bg-green-500/10 text-green-400"
-              : "bg-blue-500/10 text-blue-400"
+              : "bg-blue-50 text-blue-600"
           }`}
         >
           {icon}
         </div>
 
 
-        <span className="text-xs text-slate-600">
+        <span className="text-xs text-slate-500">
           {number}
         </span>
 
@@ -2005,7 +2017,7 @@ function ConnectionCard({
         {status ===
           "loading" && (
 
-          <span className="flex items-center gap-1 text-[11px] bg-slate-800 text-slate-400 px-2 py-1 rounded-full">
+          <span className="flex items-center gap-1 text-[11px] bg-slate-800 text-slate-500 px-2 py-1 rounded-full">
 
             <Loader2
               size={11}
@@ -2074,7 +2086,7 @@ function ConnectionCard({
         className={`mt-6 w-full border rounded-xl py-2.5 text-sm transition ${
           isConnected
             ? "border-green-500/20 text-green-400 hover:bg-green-500/10"
-            : "border-slate-700 hover:border-blue-500 hover:text-blue-400"
+            : "border-slate-300 hover:border-blue-500 hover:text-blue-600"
         }`}
       >
 

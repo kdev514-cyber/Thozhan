@@ -68,31 +68,7 @@ type CalendarEvent = {
   hangout_link: string;
 };
 
-export default function MeetingsPage() {
-  return (
-    <Suspense fallback={<MeetingsLoading />}>
-      <MeetingsContent />
-    </Suspense>
-  );
-}
-
-function MeetingsLoading() {
-  return (
-    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
-      <div className="text-center">
-        <Loader2
-          size={26}
-          className="animate-spin text-blue-400 mx-auto"
-        />
-        <p className="text-slate-400 mt-4">
-          Loading Thozhan...
-        </p>
-      </div>
-    </main>
-  );
-}
-
-function MeetingsContent() {
+function MeetingsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -164,17 +140,23 @@ function MeetingsContent() {
             `Bearer ${session.access_token}`,
         };
 
-        const statusResponse =
-          await fetch(
-            "/api/calendar/status",
-            {
-              headers,
-              cache: "no-store",
-            }
-          );
+        const [statusResponse, meetingsResponse] =
+          await Promise.all([
+            fetch(
+              "/api/calendar/status",
+              { headers, cache: "no-store" }
+            ),
+            fetch(
+              "/api/meetings",
+              { headers, cache: "no-store" }
+            ),
+          ]);
 
-        const statusData =
-          await statusResponse.json();
+        const [statusData, meetingsData] =
+          await Promise.all([
+            statusResponse.json(),
+            meetingsResponse.json(),
+          ]);
 
         if (!statusResponse.ok) {
           throw new Error(
@@ -192,18 +174,6 @@ function MeetingsContent() {
         setCalendarEmail(
           statusData.google_email || ""
         );
-
-        const meetingsResponse =
-          await fetch(
-            "/api/meetings",
-            {
-              headers,
-              cache: "no-store",
-            }
-          );
-
-        const meetingsData =
-          await meetingsResponse.json();
 
         if (!meetingsResponse.ok) {
           throw new Error(
@@ -494,6 +464,44 @@ function MeetingsContent() {
     }
   }
 
+  async function syncAndReload() {
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.replace("/");
+        return;
+      }
+
+      const response = await fetch(
+        "/api/sync",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ limit: 20 }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Unable to sync inbox.");
+      }
+
+      await loadPage();
+    } catch (error) {
+      console.error("Inbox sync failed:", error);
+      setError(error instanceof Error ? error.message : "Unable to sync inbox.");
+    }
+  }
+
+
   async function handleLogout() {
     const supabase =
       createClient();
@@ -531,9 +539,9 @@ function MeetingsContent() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex">
+    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex">
 
-      <aside className="hidden md:flex w-64 border-r border-slate-800/80 bg-slate-950 flex-col p-5">
+      <aside className="hidden md:flex w-64 border-r border-slate-200/80 bg-[#F5F5F7] flex-col p-5">
         <button
           type="button"
           onClick={() =>
@@ -541,7 +549,7 @@ function MeetingsContent() {
           }
           className="flex items-center gap-3 mb-10 text-left"
         >
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+          <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200/60">
             <Mail size={20} />
           </div>
           <div>
@@ -582,7 +590,7 @@ function MeetingsContent() {
             active
           />
 
-          <div className="border-t border-slate-800 my-5" />
+          <div className="border-t border-slate-200 my-5" />
 
           <SidebarItem
             icon={<Sparkles />}
@@ -596,7 +604,7 @@ function MeetingsContent() {
             label="Settings" onClick={() => router.push("/settings")} />
         </nav>
 
-        <div className="border-t border-slate-800 pt-5">
+        <div className="border-t border-slate-200 pt-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center">
               <User size={17} />
@@ -614,7 +622,7 @@ function MeetingsContent() {
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg p-2.5 transition text-sm"
+            className="w-full flex items-center gap-3 text-slate-500 hover:text-[#1D1D1F] hover:bg-white rounded-lg p-2.5 transition text-sm"
           >
             <LogOut size={17} />
             Sign out
@@ -623,7 +631,7 @@ function MeetingsContent() {
       </aside>
 
       <section className="flex-1 min-w-0">
-        <header className="min-h-20 border-b border-slate-800/80 flex items-center justify-between gap-4 px-6 lg:px-10 py-4">
+        <header className="min-h-20 border-b border-slate-200/80 flex items-center justify-between gap-4 px-6 lg:px-10 py-4">
           <div>
             <p className="text-sm text-slate-500">
               Thozhan Intelligence
@@ -636,10 +644,10 @@ function MeetingsContent() {
           <button
             type="button"
             onClick={() =>
-              void loadPage()
+              void syncAndReload()
             }
             disabled={loading}
-            className="inline-flex items-center gap-2 border border-slate-800 hover:border-blue-500 bg-slate-900/50 rounded-xl px-4 py-2.5 text-sm text-slate-300 hover:text-white transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 border border-slate-200 hover:border-blue-500 bg-white/80 rounded-xl px-4 py-2.5 text-sm text-slate-700 hover:text-[#1D1D1F] transition disabled:opacity-50"
           >
             <RefreshCw
               size={15}
@@ -657,13 +665,13 @@ function MeetingsContent() {
           <div className="grid lg:grid-cols-[1.35fr_0.65fr] gap-6">
 
             <div>
-              <p className="text-blue-400 text-sm font-medium">
+              <p className="text-blue-600 text-sm font-medium">
                 MEETING INTELLIGENCE
               </p>
               <h2 className="text-3xl lg:text-4xl font-semibold mt-2 tracking-tight">
                 Meetings from your inbox
               </h2>
-              <p className="text-slate-400 mt-2 max-w-2xl">
+              <p className="text-slate-500 mt-2 max-w-2xl">
                 Thozhan detects scheduling requests in Gmail
                 and keeps them beside your upcoming calendar.
                 Calendar events are only created after you
@@ -671,45 +679,40 @@ function MeetingsContent() {
               </p>
             </div>
 
-            <div className="border border-slate-800 bg-slate-900/35 rounded-2xl p-5">
-              <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  calendarConnected
-                    ? "bg-green-500/10 text-green-400"
-                    : "bg-blue-500/10 text-blue-400"
-                }`}>
-                  <CalendarDays size={19} />
-                </div>
-
-                <div className="flex-1">
-                  <p className="font-medium">
-                    Google Calendar
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {calendarConnected
-                      ? `Connected${calendarEmail ? ` · ${calendarEmail}` : ""}`
-                      : "Not connected"}
-                  </p>
+            {!calendarConnected && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                <div className="flex items-start gap-3">
+                  <CalendarDays className="text-blue-600 shrink-0 mt-0.5" size={20} />
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900">Calendar access needed</p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Thozhan is currently in Google testing. Request tester access first,
+                      then connect your Google Calendar.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.location.href =
+                            "mailto:?subject=Thozhan%20Google%20Calendar%20access%20request&body=Please%20add%20my%20Google%20account%20as%20a%20Thozhan%20Calendar%20test%20user."
+                        }
+                        className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+                      >
+                        Request access
+                      </button>
+                      <button
+                        type="button"
+                        onClick={connectCalendar}
+                        disabled={connecting}
+                        className="rounded-xl bg-blue-600 text-white px-4 py-2.5 text-sm font-medium text-[#1D1D1F] hover:bg-blue-500 disabled:opacity-50 transition"
+                      >
+                        {connecting ? "Opening Google..." : "Connect Google Calendar"}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {!calendarConnected && (
-                <button
-                  type="button"
-                  onClick={
-                    connectCalendar
-                  }
-                  disabled={
-                    connecting
-                  }
-                  className="mt-4 w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl py-2.5 text-sm font-medium transition"
-                >
-                  {connecting
-                    ? "Opening Google..."
-                    : "Connect Google Calendar"}
-                </button>
-              )}
-            </div>
+            )}
           </div>
 
           {error && (
@@ -718,20 +721,20 @@ function MeetingsContent() {
                 className="text-red-400 shrink-0"
                 size={20}
               />
-              <p className="text-sm text-slate-300">
+              <p className="text-sm text-slate-700">
                 {error}
               </p>
             </div>
           )}
 
           {loading ? (
-            <div className="mt-10 border border-slate-800 bg-slate-900/30 rounded-2xl min-h-64 flex items-center justify-center">
+            <div className="mt-10 border border-slate-200 bg-white/75 rounded-2xl min-h-64 flex items-center justify-center">
               <div className="text-center">
                 <Loader2
                   size={26}
-                  className="animate-spin text-blue-400 mx-auto"
+                  className="animate-spin text-blue-600 mx-auto"
                 />
-                <p className="text-slate-300 mt-4">
+                <p className="text-slate-700 mt-4">
                   Thozhan is checking emails and calendar...
                 </p>
               </div>
@@ -759,11 +762,11 @@ function MeetingsContent() {
                       (meeting) => (
                         <article
                           key={`${meeting.email_id}-${meeting.purpose}`}
-                          className="border border-slate-800 bg-slate-900/35 rounded-2xl p-5"
+                          className="border border-slate-200 bg-white/80 rounded-2xl p-5"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <span className="text-[11px] uppercase tracking-wide text-blue-400">
+                              <span className="text-[11px] uppercase tracking-wide text-blue-600">
                                 {meeting.confidence} confidence
                               </span>
                               <h4 className="font-semibold mt-2">
@@ -810,7 +813,7 @@ function MeetingsContent() {
                               href={meeting.meeting_link}
                               target="_blank"
                               rel="noreferrer"
-                              className="mt-4 inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+                              className="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
                             >
                               <Video size={15} />
                               Meeting link
@@ -821,7 +824,7 @@ function MeetingsContent() {
                           {calendarConnected &&
                             meeting.proposed_start &&
                             meeting.proposed_end && (
-                            <div className="mt-5 pt-4 border-t border-slate-800">
+                            <div className="mt-5 pt-4 border-t border-slate-200">
                               <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
@@ -831,7 +834,7 @@ function MeetingsContent() {
                                   disabled={
                                     checkingMeetingKey === meetingKey(meeting)
                                   }
-                                  className="inline-flex items-center gap-2 border border-slate-700 hover:border-blue-500 rounded-xl px-3.5 py-2 text-sm transition disabled:opacity-50"
+                                  className="inline-flex items-center gap-2 border border-slate-300 hover:border-blue-500 rounded-xl px-3.5 py-2 text-sm transition disabled:opacity-50"
                                 >
                                   {checkingMeetingKey === meetingKey(meeting) ? (
                                     <Loader2 size={15} className="animate-spin" />
@@ -848,7 +851,7 @@ function MeetingsContent() {
                                     disabled={
                                       schedulingMeetingKey === meetingKey(meeting)
                                     }
-                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 rounded-xl px-3.5 py-2 text-sm font-medium transition disabled:opacity-50"
+                                    className="inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 rounded-xl px-3.5 py-2 text-sm font-medium transition disabled:opacity-50"
                                   >
                                     {schedulingMeetingKey === meetingKey(meeting) ? (
                                       <Loader2 size={15} className="animate-spin" />
@@ -865,7 +868,7 @@ function MeetingsContent() {
                                   className={`text-xs mt-3 flex items-center gap-2 ${
                                     meetingAvailability[meetingKey(meeting)] === true
                                       ? "text-green-400"
-                                      : "text-slate-400"
+                                      : "text-slate-500"
                                   }`}
                                 >
                                   {meetingAvailability[meetingKey(meeting)] === true && (
@@ -878,7 +881,7 @@ function MeetingsContent() {
                           )}
 
                           {meeting.reason && (
-                            <p className="text-xs text-slate-500 leading-5 mt-4 pt-4 border-t border-slate-800">
+                            <p className="text-xs text-slate-500 leading-5 mt-4 pt-4 border-t border-slate-200">
                               {meeting.reason}
                             </p>
                           )}
@@ -913,13 +916,13 @@ function MeetingsContent() {
                       (event) => (
                         <article
                           key={event.id}
-                          className="border border-slate-800 bg-slate-900/35 rounded-2xl p-5"
+                          className="border border-slate-200 bg-white/80 rounded-2xl p-5"
                         >
                           <h4 className="font-semibold">
                             {event.summary}
                           </h4>
 
-                          <div className="mt-3 flex items-center gap-2 text-sm text-slate-400">
+                          <div className="mt-3 flex items-center gap-2 text-sm text-slate-500">
                             <Clock3 size={15} />
                             {formatDate(
                               event.start.dateTime ||
@@ -939,7 +942,7 @@ function MeetingsContent() {
                               href={event.html_link}
                               target="_blank"
                               rel="noreferrer"
-                              className="mt-4 inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+                              className="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
                             >
                               Open in Google Calendar
                               <ExternalLink size={13} />
@@ -960,13 +963,35 @@ function MeetingsContent() {
   );
 }
 
+export default function MeetingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex items-center justify-center">
+          <div className="text-center">
+            <Loader2
+              size={28}
+              className="animate-spin text-blue-600 mx-auto"
+            />
+            <p className="mt-4 text-sm text-slate-500">
+              Loading meetings...
+            </p>
+          </div>
+        </main>
+      }
+    >
+      <MeetingsPageContent />
+    </Suspense>
+  );
+}
+
 function EmptyCard({
   text,
 }: {
   text: string;
 }) {
   return (
-    <div className="border border-slate-800 bg-slate-900/25 rounded-2xl p-7 text-center text-sm text-slate-500">
+    <div className="border border-slate-200 bg-white/70 rounded-2xl p-7 text-center text-sm text-slate-500">
       {text}
     </div>
   );
@@ -982,7 +1007,7 @@ function Info({
   value: string;
 }) {
   return (
-    <div className="border border-slate-800 bg-slate-950/40 rounded-xl p-3">
+    <div className="border border-slate-200 bg-slate-50 rounded-xl p-3">
       <div className="flex items-center gap-2 text-slate-500">
         <span className="[&>svg]:w-[14px] [&>svg]:h-[14px]">
           {icon}
@@ -991,7 +1016,7 @@ function Info({
           {label}
         </span>
       </div>
-      <p className="text-sm text-slate-300 mt-2">
+      <p className="text-sm text-slate-700 mt-2">
         {value}
       </p>
     </div>
@@ -1015,8 +1040,8 @@ function SidebarItem({
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${
         active
-          ? "bg-blue-600/10 text-blue-400"
-          : "text-slate-400 hover:text-white hover:bg-slate-900"
+          ? "bg-blue-600/10 text-blue-600"
+          : "text-slate-500 hover:text-[#1D1D1F] hover:bg-white"
       }`}
     >
       <span className="[&>svg]:w-[18px] [&>svg]:h-[18px]">

@@ -75,13 +75,13 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex">
+    <main className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex">
 
       {/* LEFT SIDE */}
 
-      <section className="hidden lg:flex lg:w-1/2 relative overflow-hidden p-16 flex-col justify-between border-r border-slate-900">
+      <section className="hidden lg:flex lg:w-1/2 relative overflow-hidden p-16 flex-col justify-between border-r border-slate-200">
 
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-slate-950 to-cyan-500/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-[#F5F5F7] to-cyan-50" />
 
         {/* Logo */}
 
@@ -108,7 +108,7 @@ export default function Home() {
 
         <div className="relative z-10 max-w-xl">
 
-          <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 px-4 py-2 rounded-full text-blue-300 text-sm mb-8">
+          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-400/20 px-4 py-2 rounded-full text-blue-300 text-sm mb-8">
 
             <Sparkles size={15} />
 
@@ -121,14 +121,14 @@ export default function Home() {
 
             Your inbox,
 
-            <span className="block text-blue-400">
+            <span className="block text-blue-600">
               intelligently managed.
             </span>
 
           </h2>
 
 
-          <p className="text-slate-400 text-lg mt-7 leading-relaxed max-w-lg">
+          <p className="text-slate-500 text-lg mt-7 leading-relaxed max-w-lg">
 
             Read less. Know more. Thozhan summarises your emails,
             identifies what needs your attention and helps organise
@@ -141,7 +141,7 @@ export default function Home() {
 
             <div>
 
-              <p className="text-white font-medium">
+              <p className="text-[#1D1D1F] font-medium">
                 Smart summaries
               </p>
 
@@ -154,7 +154,7 @@ export default function Home() {
 
             <div>
 
-              <p className="text-white font-medium">
+              <p className="text-[#1D1D1F] font-medium">
                 Smart scheduling
               </p>
 
@@ -169,7 +169,7 @@ export default function Home() {
         </div>
 
 
-        <p className="relative z-10 text-slate-600 text-sm">
+        <p className="relative z-10 text-slate-500 text-sm">
           தோழன் · Your AI companion
         </p>
 
@@ -197,7 +197,7 @@ export default function Home() {
           </div>
 
 
-          <p className="text-blue-400 text-sm font-medium mb-3">
+          <p className="text-blue-600 text-sm font-medium mb-3">
             WELCOME BACK
           </p>
 
@@ -207,7 +207,7 @@ export default function Home() {
           </h2>
 
 
-          <p className="text-slate-400 mt-2 mb-9">
+          <p className="text-slate-500 mt-2 mb-9">
             Your inbox and AI assistant are waiting.
           </p>
 
@@ -225,7 +225,7 @@ export default function Home() {
 
               <label
                 htmlFor="email"
-                className="text-sm text-slate-300"
+                className="text-sm text-slate-700"
               >
                 Email address
               </label>
@@ -250,7 +250,7 @@ export default function Home() {
                     setEmail(e.target.value)
                   }
                   placeholder="you@example.com"
-                  className="w-full bg-slate-900/80 border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                  className="w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
                 />
 
               </div>
@@ -266,7 +266,7 @@ export default function Home() {
 
                 <label
                   htmlFor="password"
-                  className="text-sm text-slate-300"
+                  className="text-sm text-slate-700"
                 >
                   Password
                 </label>
@@ -274,7 +274,7 @@ export default function Home() {
 
                 <button
                   type="button"
-                  className="text-sm text-blue-400 hover:text-blue-300"
+                  className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   Forgot password?
                 </button>
@@ -305,7 +305,7 @@ export default function Home() {
                     setPassword(e.target.value)
                   }
                   placeholder="Enter your password"
-                  className="w-full bg-slate-900/80 border border-slate-800 rounded-xl py-3.5 pl-12 pr-12 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+                  className="w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-12 pr-12 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
                 />
 
 
@@ -316,7 +316,7 @@ export default function Home() {
                       (current) => !current
                     )
                   }
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-[#1D1D1F]"
                   aria-label={
                     showPassword
                       ? "Hide password"
@@ -355,7 +355,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-600/50 disabled:cursor-not-allowed rounded-xl py-3.5 font-medium flex items-center justify-center gap-2 transition"
+              className="w-full bg-blue-600 text-white hover:bg-blue-500 disabled:bg-blue-600/50 disabled:cursor-not-allowed rounded-xl py-3.5 font-medium flex items-center justify-center gap-2 transition"
             >
 
               {loading ? (
@@ -386,7 +386,7 @@ export default function Home() {
 
             <div className="h-px bg-slate-800 flex-1" />
 
-            <span className="text-xs text-slate-600">
+            <span className="text-xs text-slate-500">
               OR
             </span>
 
@@ -399,7 +399,7 @@ export default function Home() {
 
           <button
             type="button"
-            className="w-full border border-slate-800 bg-slate-900/50 hover:bg-slate-900 rounded-xl py-3.5 font-medium transition"
+            className="w-full border border-slate-200 bg-white/80 hover:bg-white rounded-xl py-3.5 font-medium transition"
           >
             Continue with Google
           </button>
@@ -407,7 +407,7 @@ export default function Home() {
 
           {/* SIGN UP */}
 
-          <p className="text-center text-slate-400 text-sm mt-8">
+          <p className="text-center text-slate-500 text-sm mt-8">
 
             New to Thozhan?{" "}
 
@@ -416,7 +416,7 @@ export default function Home() {
               onClick={() =>
                 router.push("/signup")
               }
-              className="text-blue-400 hover:text-blue-300 font-medium"
+              className="text-blue-600 hover:text-blue-700 font-medium"
             >
               Create an account
             </button>
