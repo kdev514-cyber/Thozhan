@@ -26,13 +26,13 @@ export const metadata: Metadata = {
 icons: {
   icon: [
     {
-      url: "/favicon.png?v=3",
+      url: "/favicon.png?v=4",
       type: "image/png",
       sizes: "32x32",
     },
   ],
-  shortcut: "/favicon.png?v=3",
-  apple: "/icon.png?v=3",
+  shortcut: "/favicon.png?v=4",
+  apple: "/thozhan-logo.png?v=4",
 },
 };
 
